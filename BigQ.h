@@ -14,13 +14,10 @@ class BigQ {
 public:
 	priority_queue <Record*>* pqueue;
 	pthread_t worker;
-	OrderMaker* myOrder;
-	File* sortedFile;
+	OrderMaker sortOrder;
 	Pipe &inputPipe;
 	Pipe &outputPipe;
-	Page* readCurrPage;
-	int rLen;
-		
+	int runLength;	
 
 public:
 
