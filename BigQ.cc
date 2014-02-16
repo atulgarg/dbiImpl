@@ -25,6 +25,7 @@ void* workerFunc(void *bigQ)
 	BigQ *bq  = (BigQ*) bigQ;
 	sortOrder = bq->sortOrder;
 	File* file = new File();
+	file->Open(0,"temp.dat");
 	Pipe& in = bq->inputPipe;
 	Pipe& out = bq->outputPipe;
 	int runlen = bq->runLength;
@@ -33,6 +34,7 @@ void* workerFunc(void *bigQ)
 	cout<<"File Length "<<file->GetLength()<<"\n";
 	//once a file is created of sorted runs merge each of the run.
 	//mergeRunsFromFile(file,runlen,out,sortOrder);
+	file->Close();
 	out.ShutDown ();
 
 }
@@ -52,7 +54,7 @@ int comparator(Record* r1,Record* r2)
 void createRuns(int runlen,Pipe& in,Pipe& out,File *file)
 {
 	Record* currentRecord = new Record();
-	Page pages[runlen];
+	Page* pages= new Page[runlen]();
 	vector<Record*> list;
 	int numPages = 0;
 	while(in.Remove(currentRecord) != 0)
@@ -70,6 +72,7 @@ void createRuns(int runlen,Pipe& in,Pipe& out,File *file)
 			   //get all records from array of pages and put it to vector to sort and put it to file.
 			   copyRecordsToFile(pages,file,runlen-1);
 			   numPages = 0;
+			   pages = new Page[runlen]();
 			}
 			pages[numPages].Append(currentRecord);	
 		}
@@ -103,24 +106,29 @@ void copyRecordsToFile(Page pages[],File* file,int runlen)
  */
 void writeRunToFile(File* file, vector<Record*> &list)
 {
-	cout<<"WriteRunToFile\n";
+	cout<<"WriteRunToFile : " + list.size()<<"\n";
 	Page* page = new Page();
 	for(int i=0;i<list.size();i++)
 	{
 		cout<<"Iterating "<<list.size()<<" "<<i<<"\n";
 		Record* record = list[i];
 		int status = page->Append(record);
+		cout<<"Status :: "<<status<<"\n";
 		//if record was not added to page i.e. page was full.
 		if(status == 0)
 		{
-			off_t offSet = file->GetLength()-1;
+			off_t offSet = file->GetLength();
 			file->AddPage(page,offSet);
-			page = new Page();
-			//to check if page is cleaned.
+			page->EmptyItOut();
+			//append the record to new page.
 			page->Append(record);
 		}
 	}
-	file->AddPage(page,file->GetLength()-1);
+	cout<<"ATul Garg\n";
+	off_t offSet = file->GetLength();
+	cout<<"offset : "<<offSet<<"\n";
+	file->AddPage(page,offSet);
+	page->EmptyItOut();
 }
 class ComparisonClass
 {

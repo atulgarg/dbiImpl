@@ -203,7 +203,6 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 			lseek (myFilDes,PAGE_SIZE * i,SEEK_SET);
 			write (myFilDes, &foo, sizeof (int));
 		}
-
 		// set the size
 		curLength = whichPage + 1;	
 	}
