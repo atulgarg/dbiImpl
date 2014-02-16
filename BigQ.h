@@ -25,10 +25,10 @@ public:
 	~BigQ ();
 };
 void* workerFunc(void *bigQ);
-int comparator(Record r1,Record r2);
-File* createRuns(int runlen,Pipe in,Pipe out);
-void writeRunToFile(File* file, vector<Record> &list);
-void mergeRunsFromFile(File* file, int runLength,Pipe out,OrderMaker *orderMaker);
+int comparator(Record* r1,Record* r2);
+void createRuns(int runlen,Pipe& in,Pipe& out,File* file);
+void writeRunToFile(File* file, vector<Record*> &list);
+void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMaker);
 static OrderMaker sortOrder;
-
+void copyRecordsToFile(Page pages[],File* file,int runlen);
 #endif

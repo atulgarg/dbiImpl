@@ -12,7 +12,7 @@ BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen): inputPipe
  	// into the out pipe
 
     // finally shut down the out pipe
-	out.ShutDown ();
+	//out.ShutDown ();
 }
 
 BigQ::~BigQ () {
@@ -24,85 +24,103 @@ void* workerFunc(void *bigQ)
 {
 	BigQ *bq  = (BigQ*) bigQ;
 	sortOrder = bq->sortOrder;
-	File* file;
-	Pipe in = bq->inputPipe;
-	Pipe out = bq->outputPipe;
+	File* file = new File();
+	Pipe& in = bq->inputPipe;
+	Pipe& out = bq->outputPipe;
 	int runlen = bq->runLength;
 	//create file of sorted runs.
-	file = createRuns(runlen,in,out);
+	createRuns(runlen,in,out,file);
+	cout<<"File Length "<<file->GetLength()<<"\n";
 	//once a file is created of sorted runs merge each of the run.
+	//mergeRunsFromFile(file,runlen,out,sortOrder);
+	out.ShutDown ();
+
 }
 /**
  *
  */
-int comparator(Record r1,Record r2)
+int comparator(Record* r1,Record* r2)
 {
 	ComparisonEngine* compEngine = new ComparisonEngine();
-	return (compEngine->Compare(&r1,&r2,&sortOrder) <= 0);
+	return (compEngine->Compare(r1,r2,&sortOrder) <= 0);
 }
 /**
  * @method createRuns to create a file of sorted runs and number of runs.
  * @returns total number of runs created.
  *
  */
-File* createRuns(int runlen,Pipe in,Pipe out)
+void createRuns(int runlen,Pipe& in,Pipe& out,File *file)
 {
-	Record currentRecord;
-	File* file  = new File();
-	Page* page = new Page();
-	vector<Record> list;
+	Record* currentRecord = new Record();
+	Page pages[runlen];
+	vector<Record*> list;
 	int numPages = 0;
-	
-	while(in.Remove(&currentRecord) != 0)
+	while(in.Remove(currentRecord) != 0)
 	{
 		//push record to list and put the same to page to keep a check of number of pages to compare with run length.
-		list.push_back(currentRecord);
-		int status = page->Append(&currentRecord);
 		//if page was full
-		if(status == 0)
+		cout<<"Yahan "<<endl;
+		if(pages[numPages].Append(currentRecord) == 0)
 		{
-			numPages++;
-			if(numPages % runlen == 0)
+			//Page Full
+			if(numPages<runlen)
+				numPages++;
+			else
 			{
-			  //Sort the content of Vector and place it in File.
-			  sort(list.begin(),list.end(),comparator);
-  			  writeRunToFile(file,list);
-			  list.clear();			  
+			   //get all records from array of pages and put it to vector to sort and put it to file.
+			   copyRecordsToFile(pages,file,runlen-1);
+			   numPages = 0;
 			}
-			currentRecord = (list.back());
-			status = page->Append(&currentRecord);
+			pages[numPages].Append(currentRecord);	
+		}
+		
+		currentRecord = new Record();
+	}
+	//If records in list are less than page.
+	copyRecordsToFile(pages,file,numPages);
+}
+void copyRecordsToFile(Page pages[],File* file,int runlen)
+{
+	vector<Record*> list;
+	cout<<"Run len : "<<runlen<<"\n";
+	for(int i=0;i<=runlen;i++)
+	{
+		Record * record = new Record();
+		while(pages[i].GetFirst(record)!=0)
+		{
+			list.push_back(record);
+			record = new Record();
 		}
 	}
-	return file;
+	sort(list.begin(),list.end(),comparator);
+	writeRunToFile(file,list);
 }
-
 /**
  * @method writeRunToFile to write records read from input pipe to File as sorted runs.
  * @param File* pointer to File where records need to be written.
  * @param vector<Record> list of Records to be written to file.
  * 
  */
-void writeRunToFile(File* file, vector<Record> &list)
+void writeRunToFile(File* file, vector<Record*> &list)
 {
+	cout<<"WriteRunToFile\n";
 	Page* page = new Page();
 	for(int i=0;i<list.size();i++)
 	{
-		Record record = list[i];
-		int status = page->Append(&record);
+		cout<<"Iterating "<<list.size()<<" "<<i<<"\n";
+		Record* record = list[i];
+		int status = page->Append(record);
 		//if record was not added to page i.e. page was full.
 		if(status == 0)
 		{
-			off_t offSet = file->GetLength();
+			off_t offSet = file->GetLength()-1;
 			file->AddPage(page,offSet);
 			page = new Page();
 			//to check if page is cleaned.
+			page->Append(record);
 		}
-		else
-			continue;
-		//if record was not added add the record from the list to page.
-		record = (list[i]);
-		page->Append(&record);
 	}
+	file->AddPage(page,file->GetLength()-1);
 }
 class ComparisonClass
 {
@@ -122,9 +140,10 @@ class ComparisonClass
 /**
  * 
  */
-void mergeRunsFromFile(File* file, int runLength,Pipe out,OrderMaker *orderMaker)
+void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMaker)
 {
 	int fileLength = file->GetLength();
+	cout<<"File Length : "<<fileLength<<"\n";
 	int numRuns = ceil(fileLength*1.0f/runLength);
 	std::priority_queue<pair<Record,int>, std::vector<pair<Record,int> >,ComparisonClass> priorityQueue;
 	//Array of Pages to keep hold of current Page from each of run.
@@ -134,9 +153,9 @@ void mergeRunsFromFile(File* file, int runLength,Pipe out,OrderMaker *orderMaker
 	//initialise offset array to keep track of next page for each run.
 	//Initialise each of the Page Buffers with the first page of each run.
 	int k =0;
-	for(int i=0;i<fileLength;i+=runLength)
+	for(int i=0;i<=fileLength;i+=runLength)
 		offset.push_back(i);
-	for(int i=0;i<fileLength;i+=runLength)
+	for(int i=0;i<=fileLength;i+=runLength)
 	{
 		//Get the Page for offset in Buffer.
 		file->GetPage(&pageBuffers[k],offset[k]);
