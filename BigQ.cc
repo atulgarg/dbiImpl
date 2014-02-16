@@ -1,6 +1,7 @@
 #include "BigQ.h"
 
 BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen): inputPipe(in),outputPipe(out),sortOrder(sortorder) {
+	sortOrder.Print();
 	// read data from in pipe sort them into runlen pages
 	runLength = runlen;
 	int rc = pthread_create(&worker,NULL,workerFunc,(void*)this);
@@ -16,6 +17,7 @@ BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen): inputPipe
 }
 
 BigQ::~BigQ () {
+	pthread_join(worker, NULL);
 }
 /*
  *
@@ -24,6 +26,7 @@ void* workerFunc(void *bigQ)
 {
 	BigQ *bq  = (BigQ*) bigQ;
 	sortOrder = bq->sortOrder;
+	sortOrder.Print();
 	File* file = new File();
 	file->Open(0,"temp.dat");
 	Pipe& in = bq->inputPipe;
@@ -40,10 +43,11 @@ void* workerFunc(void *bigQ)
 /**
  *
  */
-int comparator(Record* r1,Record* r2)
+int comparator(const void *r1,const void* r2)
 {
+	cout<<"Comparator"<<endl;
 	ComparisonEngine* compEngine = new ComparisonEngine();
-	return (compEngine->Compare(r1,r2,&sortOrder) <= 0);
+	return (compEngine->Compare((Record*)r1,(Record*)r2,&sortOrder));
 }
 /**
  * @method createRuns to create a file of sorted runs and number of runs.
@@ -55,6 +59,7 @@ void createRuns(int runlen,Pipe& in,Pipe& out,File *file)
 	Record* currentRecord = new Record();
 	Page* pages= new Page[runlen]();
 	vector<Record*> list;
+	int i=0;
 	int numPages = 0;
 	while(in.Remove(currentRecord) != 0)
 	{
@@ -63,37 +68,51 @@ void createRuns(int runlen,Pipe& in,Pipe& out,File *file)
 		if(pages[numPages].Append(currentRecord) == 0)
 		{
 			//Page Full
-			if(numPages<runlen)
+			if(numPages<runlen-1)
 				numPages++;
 			else
 			{
 			   //get all records from array of pages and put it to vector to sort and put it to file.
+			   cout<<"KKya ye yahan aa raha hai \n";
 			   copyRecordsToFile(pages,file,runlen-1);
 			   numPages = 0;
+			   delete[] pages;
 			   pages = new Page[runlen]();
 			}
 			pages[numPages].Append(currentRecord);	
 		}
-		
+		cout<<i++<<"\n";
 		currentRecord = new Record();
 	}
 	//If records in list are less than page.
 	copyRecordsToFile(pages,file,numPages);
 }
+/**
+ *
+ */
 void copyRecordsToFile(Page pages[],File* file,int runlen)
 {
+	cout<<"Log Start:: copyRecordsToFile\n";
+	cout<<"Run Length :: "<<runlen<<"\n";
 	vector<Record*> list;
 	for(int i=0;i<=runlen;i++)
 	{
+		cout<<"i = "<<i<<endl;
 		Record * record = new Record();
 		while(pages[i].GetFirst(record)!=0)
 		{
+			cout<<"abcd"<<endl;
 			list.push_back(record);
 			record = new Record();
 		}
+		cout<<"end of While loop"<<endl;
 	}
-	sort(list.begin(),list.end(),comparator);
+	cout<<"Before Sort"<<endl;
+	qsort(list[0],list.size(),sizeof(Record*),comparator);
+	cout<<"After Sort"<<endl;
 	writeRunToFile(file,list);
+	cout<<"Log End::copyRecordsToFile\n";
+
 }
 /**
  * @method writeRunToFile to write records read from input pipe to File as sorted runs.
@@ -103,6 +122,7 @@ void copyRecordsToFile(Page pages[],File* file,int runlen)
  */
 void writeRunToFile(File* file, vector<Record*> &list)
 {
+	cout<<"Log Start:: writeRunToFile\n";
 	Page* page = new Page();
 	for(int i=0;i<list.size();i++)
 	{
@@ -121,6 +141,7 @@ void writeRunToFile(File* file, vector<Record*> &list)
 	off_t offSet = file->GetLength();
 	file->AddPage(page,offSet);
 	page->EmptyItOut();
+	cout<<"Log End:: writeRunToFile\n";
 }
 class ComparisonClass
 {
