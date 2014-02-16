@@ -78,7 +78,6 @@ int Page :: Append (Record *addMe) {
 	curSizeInBytes += ((int *) b)[0];
 	myRecs->Insert(addMe);
 	numRecs++;
-
 	return 1;	
 }
 
@@ -87,7 +86,6 @@ void Page :: ToBinary (char *bits) {
 
 	// first write the number of records on the page
 	((int *) bits)[0] = numRecs;
-
 	char *curPos = bits + sizeof (int);
 
 	// and copy the records one-by-one
@@ -206,7 +204,6 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 		// set the size
 		curLength = whichPage + 1;	
 	}
-
 	// now write the page
 	char *bits = new (std::nothrow) char[PAGE_SIZE];
 	if (bits == NULL)
@@ -214,7 +211,6 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 		cout << "ERROR : Not enough memory. EXIT !!!\n";
 		exit(1);
 	}
-
 	addMe->ToBinary (bits);
 	lseek (myFilDes, PAGE_SIZE * whichPage, SEEK_SET);
 	write (myFilDes, bits, PAGE_SIZE);
