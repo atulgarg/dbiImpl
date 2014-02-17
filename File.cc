@@ -212,6 +212,7 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 		exit(1);
 	}
 	addMe->ToBinary (bits);
+	cout<<"Bits::"<<bits<<endl;
 	lseek (myFilDes, PAGE_SIZE * whichPage, SEEK_SET);
 	write (myFilDes, bits, PAGE_SIZE);
 	delete [] bits;

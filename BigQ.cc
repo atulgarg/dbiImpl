@@ -1,7 +1,6 @@
 #include "BigQ.h"
 
 BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen): inputPipe(in),outputPipe(out),sortOrder(sortorder) {
-	sortOrder.Print();
 	// read data from in pipe sort them into runlen pages
 	runLength = runlen;
 	int rc = pthread_create(&worker,NULL,workerFunc,(void*)this);
@@ -45,7 +44,6 @@ void* workerFunc(void *bigQ)
  */
 int comparator(const void *r1,const void* r2)
 {
-	cout<<"Comparator"<<endl;
 	ComparisonEngine* compEngine = new ComparisonEngine();
 	return (compEngine->Compare((Record*)r1,(Record*)r2,&sortOrder));
 }
@@ -81,7 +79,6 @@ void createRuns(int runlen,Pipe& in,Pipe& out,File *file)
 			}
 			pages[numPages].Append(currentRecord);	
 		}
-		cout<<i++<<"\n";
 		currentRecord = new Record();
 	}
 	//If records in list are less than page.
@@ -92,8 +89,6 @@ void createRuns(int runlen,Pipe& in,Pipe& out,File *file)
  */
 void copyRecordsToFile(Page pages[],File* file,int runlen)
 {
-	cout<<"Log Start:: copyRecordsToFile\n";
-	cout<<"Run Length :: "<<runlen<<"\n";
 	vector<Record*> list;
 	for(int i=0;i<=runlen;i++)
 	{
@@ -101,18 +96,12 @@ void copyRecordsToFile(Page pages[],File* file,int runlen)
 		Record * record = new Record();
 		while(pages[i].GetFirst(record)!=0)
 		{
-			cout<<"abcd"<<endl;
 			list.push_back(record);
 			record = new Record();
 		}
-		cout<<"end of While loop"<<endl;
 	}
-	cout<<"Before Sort"<<endl;
 	qsort(list[0],list.size(),sizeof(Record*),comparator);
-	cout<<"After Sort"<<endl;
 	writeRunToFile(file,list);
-	cout<<"Log End::copyRecordsToFile\n";
-
 }
 /**
  * @method writeRunToFile to write records read from input pipe to File as sorted runs.
@@ -122,7 +111,6 @@ void copyRecordsToFile(Page pages[],File* file,int runlen)
  */
 void writeRunToFile(File* file, vector<Record*> &list)
 {
-	cout<<"Log Start:: writeRunToFile\n";
 	Page* page = new Page();
 	for(int i=0;i<list.size();i++)
 	{
@@ -141,7 +129,6 @@ void writeRunToFile(File* file, vector<Record*> &list)
 	off_t offSet = file->GetLength();
 	file->AddPage(page,offSet);
 	page->EmptyItOut();
-	cout<<"Log End:: writeRunToFile\n";
 }
 class ComparisonClass
 {
@@ -167,7 +154,7 @@ void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMake
 	int numRuns = ceil(fileLength*1.0f/runLength);
 	std::priority_queue<pair<Record*,int>, std::vector<pair<Record*,int> >,ComparisonClass> priorityQueue;
 	//Array of Pages to keep hold of current Page from each of run.
-	Page* pageBuffers = new Page[runLength]();
+	Page* pageBuffers = new Page[numRuns]();
 	//initialise each page with corresponding page in File.
 	vector<off_t> offset;
 	//initialise offset array to keep track of next page for each run.
@@ -202,12 +189,14 @@ void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMake
 			//if no records were found from the page try to get the next page if page exists in the same run.
 			off_t currOffset = offset[runNum];
 			//only if there are more pages in run read the next page else skip.
-			if(currOffset%runLength != 0 || currOffset <fileLength)
+			cout<<"currOffset::"<<currOffset<<" runLength:: "<<runLength<<" fileLength :: "<<fileLength<<endl;
+			if(currOffset%runLength != 0 && currOffset < fileLength)
 			{	
 				file->GetPage(&pageBuffers[runNum],currOffset);
 				//increament offset after reading page from current offset for run
 				offset[runNum]++;	
-				
+				if(pageBuffers[runNum].GetFirst(recordToInsert) == 0)
+					continue;
 			}
 			else
 			{

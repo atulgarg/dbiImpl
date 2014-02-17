@@ -10,7 +10,6 @@
 // returns a -1, 0, or 1 depending upon whether left is less then, equal to, or greater
 // than right, depending upon the OrderMaker
 int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs) {
-	cout<<"Compare::"<<endl;
 	char *val1, *val2;
 
 	char *left_bits = left->GetBits();
@@ -33,7 +32,6 @@ int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs
 			// cast the two bit strings to ints
 			val1Int = *((int *) val1);
 			val2Int = *((int *) val2);
-			cout<<val1Int<<" :: " <<val2Int<<"::"<<endl;
 
 			// and do the comparison
 			if (val1Int < val2Int) 
@@ -50,7 +48,6 @@ int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs
 			// cast the two bit strings to doubles
 			val1Double = *((double *) val1);
 			val2Double = *((double *) val2);
-			cout<<val1Double<<" :: " <<val2Double<<"::"<<endl;
 
 			// and do the comparison
 			if (val1Double < val2Double)
@@ -64,7 +61,6 @@ int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs
 			// last case: dealing with strings
 			default:
 			int sc = strcmp (val1, val2);
-			cout<<val1<<" :: " <<val2<<"::"<<sc<<endl;
 			
 			if (sc != 0)
 				return sc;
