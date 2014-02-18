@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <algorithm>
 using namespace std;
+#define BIGQTEMPFILE "bigqtemp.dat"
 
 class BigQ {
 public:
@@ -24,6 +25,7 @@ public:
 	BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);
 	~BigQ ();
 };
+
 /**
  * Class RecordWrapper for Wrapping records along with OrderMaker. Used to internal sorting list of records.
  */ 
@@ -47,11 +49,14 @@ class ComparisonClass
 };
 //Main worker function which invokes various functions to do tasks.
 void* workerFunc(void *bigQ);
-//Function which sorts list of records specified in record wrapper and add it to end of file.
+
+//Function which sorts list of records specified in record wrapper and add it to end of file. Method also adds run length info in runLengthInfo
 void sortAndCopyToFile(vector<RecordWrapper*>& list,File* file,vector<pair<off_t,off_t> >& runLengthInfo);
+
 //Function to create runs each of which reads pages equal to runlen.
 void createRuns(int runlen, Pipe& in, File* file,OrderMaker& sortOrder,vector<pair<off_t,off_t> >& runLengthInfo);
 
+//Function merges runs from file specified and reads data from runLengthInfo.
 void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMaker,vector<pair<off_t,off_t> >& runLengthInfo);
 
 #endif
