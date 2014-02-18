@@ -43,7 +43,7 @@ class ComparisonClass
 	ComparisonEngine* compEngine;
 	public:
 	ComparisonClass();
-	bool operator()(const pair<Record*,int> &lhs, const pair<Record*,int> &rhs);
+	bool operator()(const pair<RecordWrapper*,int> &lhs, const pair<RecordWrapper*,int> &rhs);
 };
 //Main worker function which invokes various functions to do tasks.
 void* workerFunc(void *bigQ);

@@ -29,12 +29,12 @@ ComparisonClass:: ComparisonClass()
 /**
  * Operator overloading for comparison in priorityQueue.
  */
-bool ComparisonClass:: operator()(const pair<Record*,int> &lhs, const pair<Record*,int> &rhs)
+bool ComparisonClass:: operator()(const pair<RecordWrapper*,int> &lhs, const pair<RecordWrapper*,int> &rhs)
 {
-	Record* r1 = lhs.first;
-	Record* r2 = rhs.first;
+	RecordWrapper* rw1 = lhs.first;
+	RecordWrapper* rw2 = rhs.first;
 	OrderMaker sortOrder;
-	return (compEngine->Compare(r1,r2,&sortOrder) <= 0);
+	return (compEngine->Compare(&(rw1->record),&(rw2->record),&sortOrder) <= 0);
 }
 
 BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen): inputPipe(in),outputPipe(out),sortOrder(sortorder) {
@@ -161,10 +161,10 @@ void sortAndCopyToFile(vector<RecordWrapper*>& list,File* file,vector<pair<off_t
 /**
  * 
  */
-void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMaker,vector<pair<off_t,off_t> >& runLengthInfo)
+void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& sortOrder,vector<pair<off_t,off_t> >& runLengthInfo)
 {
 	int numRuns = runLengthInfo.size();
-	std::priority_queue<pair<Record*,int>, std::vector<pair<Record*,int> >,ComparisonClass> priorityQueue;
+	std::priority_queue<pair<RecordWrapper*,int>, std::vector<pair<RecordWrapper*,int> >,ComparisonClass> priorityQueue;
 	cout<<"NumRuns ::: "<<numRuns<<endl;
 
 	//Array of Pages to keep hold of current Page from each of run.
@@ -185,20 +185,22 @@ void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMake
 		//For each of the page get the first record in priority queue.
 		Record* record = new Record();
 		pageBuffers[i].GetFirst(record);
-		priorityQueue.push(make_pair(record,i));
+		RecordWrapper* rWrap = new RecordWrapper(record,&sortOrder);
+		priorityQueue.push(make_pair(rWrap,i));
 	}
 	for(int i=0;i<offset.size();i++)
 	{
 		cout<<"offset for run " <<i<<" offset : "<<offset[i]<<endl;
 	}
 	//while priority queue is not empty keeping popping records from Priority Queue and write it to pipe.
-	Record* record;
+	RecordWrapper* recordWrap;
 	while(!priorityQueue.empty())
 	{
-		pair<Record*, int> topPair = priorityQueue.top();
-		record = topPair.first;
+		pair<RecordWrapper*, int> topPair = priorityQueue.top();
+		recordWrap = topPair.first;
 		int runNum = topPair.second;
 		priorityQueue.pop();
+		Record * record = &(recordWrap->record);
 		//Write record to output pipe.
 		out.Insert(record);
 		//Get the next record from Record Num and add it to priorityQueue.
@@ -226,7 +228,8 @@ void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMake
 				continue;
 			}
 		}//no else block required since it has no more pages to read.
-		priorityQueue.push(make_pair(recordToInsert,runNum));
+		RecordWrapper* nextRecordWrap = new RecordWrapper(recordToInsert,&sortOrder);
+		priorityQueue.push(make_pair(nextRecordWrap,runNum));
 	}
 
 }
