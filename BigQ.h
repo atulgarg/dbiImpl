@@ -32,11 +32,17 @@ class RecordWrapper
 	RecordWrapper(Record *record,OrderMaker* orderMaker);
 	static int compareRecords(const void *rw1, const void *rw2);
 };
+class ComparisonClass
+{
+	ComparisonEngine* compEngine;
+	public:
+	ComparisonClass();
+	bool operator()(const pair<Record*,int> &lhs, const pair<Record*,int> &rhs);
+};
 void* workerFunc(void *bigQ);
 void sortAndCopyToFile(vector<RecordWrapper*>& list,File* file);
 void createRuns(int runlen, Pipe& in, File* file,OrderMaker& sortOrder);
 void writeRunToFile(File* file, vector<Record*> &list);
 void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMaker);
-//static OrderMaker sortOrder;
 void copyRecordsToFile(Page pages[],File* file,int runlen);
 #endif
