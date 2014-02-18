@@ -24,11 +24,19 @@ public:
 	BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);
 	~BigQ ();
 };
+class RecordWrapper
+{
+	public:
+	Record record;
+	OrderMaker* sortOrder;
+	RecordWrapper(Record *record,OrderMaker* orderMaker);
+	static int compareRecords(const void *rw1, const void *rw2);
+};
 void* workerFunc(void *bigQ);
-int comparator(Record* r1,Record* r2);
-void createRuns(int runlen,Pipe& in,Pipe& out,File* file);
+void sortAndCopyToFile(vector<RecordWrapper*>& list,File* file);
+void createRuns(int runlen, Pipe& in, File* file,OrderMaker& sortOrder);
 void writeRunToFile(File* file, vector<Record*> &list);
 void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMaker);
-static OrderMaker sortOrder;
+//static OrderMaker sortOrder;
 void copyRecordsToFile(Page pages[],File* file,int runlen);
 #endif
