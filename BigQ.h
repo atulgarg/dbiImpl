@@ -24,6 +24,9 @@ public:
 	BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);
 	~BigQ ();
 };
+/**
+ * Class RecordWrapper for Wrapping records along with OrderMaker. Used to internal sorting list of records.
+ */ 
 class RecordWrapper
 {
 	public:
@@ -32,6 +35,9 @@ class RecordWrapper
 	RecordWrapper(Record *record,OrderMaker* orderMaker);
 	static int compareRecords(const void *rw1, const void *rw2);
 };
+/**
+ * ComparisonClass used for Priority queue for comparing objects on queue.
+ */
 class ComparisonClass
 {
 	ComparisonEngine* compEngine;
@@ -39,10 +45,13 @@ class ComparisonClass
 	ComparisonClass();
 	bool operator()(const pair<Record*,int> &lhs, const pair<Record*,int> &rhs);
 };
+//Main worker function which invokes various functions to do tasks.
 void* workerFunc(void *bigQ);
-void sortAndCopyToFile(vector<RecordWrapper*>& list,File* file);
-void createRuns(int runlen, Pipe& in, File* file,OrderMaker& sortOrder);
-void writeRunToFile(File* file, vector<Record*> &list);
-void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMaker);
-void copyRecordsToFile(Page pages[],File* file,int runlen);
+//Function which sorts list of records specified in record wrapper and add it to end of file.
+void sortAndCopyToFile(vector<RecordWrapper*>& list,File* file,vector<pair<off_t,off_t> >& runLengthInfo);
+//Function to create runs each of which reads pages equal to runlen.
+void createRuns(int runlen, Pipe& in, File* file,OrderMaker& sortOrder,vector<pair<off_t,off_t> >& runLengthInfo);
+
+void mergeRunsFromFile(File* file, int runLength,Pipe& out,OrderMaker& orderMaker,vector<pair<off_t,off_t> >& runLengthInfo);
+
 #endif
