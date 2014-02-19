@@ -47,14 +47,16 @@ void *consumer (void *arg) {
 
 	Record rec[2];
 	Record *last = NULL, *prev = NULL;
-
+	int j =0;
 	while (t->pipe->Remove (&rec[i%2])) {
 		prev = last;
 		last = &rec[i%2];
-
+		j++;
 		if (prev && last) {
 			if (ceng.Compare (prev, last, t->order) == 1) {
+				cout<<j<<endl;
 				err++;
+				prev->Print(rel->schema());cout<< "\t"; last->Print(rel->schema()); cout<<endl;
 			}
 			if (t->write) {
 				dbfile.Add (*prev);
