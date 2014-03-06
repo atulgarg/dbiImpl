@@ -12,16 +12,14 @@
 using namespace std;
 #define BIGQTEMPFILE "bigqtemp.dat"
 
-class BigQ {
+class BigQ
+{
 public:
 	pthread_t worker;
 	OrderMaker sortOrder;
 	Pipe &inputPipe;
 	Pipe &outputPipe;
 	int runLength;	
-
-public:
-
 	BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);
 	~BigQ ();
 };
