@@ -8,7 +8,7 @@
 #include "Defs.h"
 #include "string.h"
 #include "stdlib.h"
-#include<iostream>
+#include <iostream>
 /**
  * @method getMetaDataFileName to generate file name for metadata based on file input. Meta data will be created with name as
  * filename.meta.
