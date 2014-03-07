@@ -9,7 +9,6 @@
 #include<iostream>
 #include<stdlib.h>
 #include<string.h>
-// stub file .. replace it with your own Heap.cc
 
 HeapFile::HeapFile () 
 {

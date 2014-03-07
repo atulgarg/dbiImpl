@@ -11,15 +11,13 @@
 #include "HeapFile.h"
 #include "SortedFile.h"
 
-typedef enum {heap, sorted, tree} fType;
 
 class DBFile {
-	priivate:
+	private:
 		GenericDBFile* dbFile;
 		FILE* metaFile;	
 	public:
 		DBFile (); 
-		GenericDBFile* dbFile;
 
 		int Create (char *fpath, fType file_type, void *startup);
 		int Open (char *fpath);

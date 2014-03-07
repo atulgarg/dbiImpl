@@ -64,7 +64,7 @@ int DBFile::Create (char *f_path, fType f_type, void *startup)
 
 void DBFile::Load (Schema &f_schema, char *loadpath) 
 {
-
+	dbFile->Load(f_schema,loadpath);
 }
 
 int DBFile::Open (char *f_path) 
