@@ -110,4 +110,5 @@ int DBFile::GetNext (Record &fetchme)
 }
 
 int DBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
+    return dbFile->GetNext(fetchme,cnf,literal);
 }

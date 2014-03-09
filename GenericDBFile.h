@@ -18,7 +18,6 @@ struct SortInfo
 class GenericDBFile {
 
 public:
-	GenericDBFile (); 
 	virtual int Create (char *fpath, fType file_type, void *startup) = 0;
 	virtual int Open (char *fpath) = 0;
 	virtual int Close () = 0;
