@@ -10,7 +10,7 @@
 #include<stdlib.h>
 #include<string.h>
 
-HeapFile::HeapFile () 
+HeapFile::HeapFile() : GenericDBFile() 
 {
 	readPage = NULL;
 	writePage = NULL;

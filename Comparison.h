@@ -97,6 +97,9 @@ public:
         // a relational selection over a single relation so only one schema is used
         void GrowFromParseTree (struct AndList *parseTree, Schema *mySchema, 
 		Record &literal);
+        //Function to initialise a SortOrder instance based on Query SortOrder passed and returns 1 if atleast one attribute
+        //matches and 0 if not.
+        int QueryMaker(OrderMaker& queryOrder, OrderMaker &sortOrder);
 
 };
 

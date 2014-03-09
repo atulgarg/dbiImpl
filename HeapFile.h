@@ -21,7 +21,7 @@ class HeapFile : public virtual GenericDBFile
 	protected:
 	File* myHeap;
 	public:
-	HeapFile (); 
+	HeapFile(); 
 
 	int Create (char *fpath, fType file_type, void *startup);
 	int Open (char *fpath);

@@ -16,9 +16,9 @@
  */
 char * DBFile:: getMetaDataFileName(char* f_path)
 {
-	char* metaFileName = (char*) malloc((strlen(f_path) + strlen(".meta"))*sizeof(char));
+	char* metaFileName = (char*) malloc((strlen(f_path) + strlen(".meta") + 1)*sizeof(char));
 	//create meta file name as fpath + ".meta"
-	strcat(metaFileName,f_path);
+	strcpy(metaFileName,f_path);
 	strcat(metaFileName,".meta");
 	return metaFileName;
 }
@@ -47,7 +47,7 @@ int DBFile::Create (char *f_path, fType f_type, void *startup)
 	//write filetype to metadata file.
 	int fileType = f_type;
 	fwrite(&fileType,sizeof(char),sizeof(int),metaFile);
-
+	fclose(metaFile);
 	//if File type spcified is heap type initialise variable with heap and call the instance's create method.
 	if(f_type == heap)
 	{
@@ -94,9 +94,9 @@ void DBFile::MoveFirst ()
 int DBFile::Close () 
 {
 	//close metadata file and respective open DBFile.
-	int metaStatus = fclose(metaFile);
+	//int metaStatus = fclose(metaFile);
 	int dbfileStatus = dbFile->Close();
-	return (metaStatus && dbfileStatus);
+	return dbfileStatus;//(metaStatus && dbfileStatus);
 }
 
 void DBFile::Add (Record &rec) 

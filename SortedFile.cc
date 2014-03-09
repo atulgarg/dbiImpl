@@ -17,6 +17,7 @@ void SortedFile::writeSortedOrdertoMetadata(FILE* metaFile,SortInfo* sortInfo)
 	int status = fseek(metaFile, sizeof(int), SEEK_SET);
 	fwrite(sortInfo,sizeof(char), sizeof(*sortInfo), metaFile);
 }
+
 int SortedFile:: initialiseSortedFile(int fileLen,char* fpath)
 {
 	myfile = new File();
@@ -29,7 +30,7 @@ int SortedFile:: initialiseSortedFile(int fileLen,char* fpath)
 /**
  * Method to initialise each pipe with adequate Buffer Size						//To Check
  */
-SortedFile::SortedFile()
+SortedFile::SortedFile(): GenericDBFile()
 {
 	in = new Pipe(100);
 	out = new Pipe(100);
@@ -96,8 +97,6 @@ int SortedFile::Open (char *f_path)
 	fseek(metaFile, sizeof(int),SEEK_SET);
 	fread(&sortInfo, sizeof(char), sizeof(SortInfo),metaFile);
 	fclose(metaFile);
-	myfile = new File();
-	myfile->Open(1,f_path);
 
 	return initialiseSortedFile(1,f_path);
 }
@@ -276,5 +275,51 @@ int SortedFile::GetNext (Record &fetchme)
         return status;	
 }
 
-int SortedFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
+int SortedFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) 
+{
+    OrderMaker queryOrder;
+    if(cnf.QueryMaker(queryOrder,*(sortInfo->myOrder)) == 0)
+       return GetNext(fetchme);
+    else
+    {
+        //Binary Search
+        return BinarySearch(fetchme, queryOrder, cnf, literal);
+    }
+}
+int SortedFile::BinarySearch(Record &fetchme,OrderMaker& queryOrder,CNF &cnf,Record &literal)
+{
+    ComparisonEngine compEngine;
+    off_t fpIndex = 0;
+    off_t lpIndex = myfile->GetLength()-1;
+    off_t mid = floor((fpIndex + lpIndex)/2.0);
+    while(lpIndex<fpIndex)
+    {
+        myfile->GetPage(readPage,mid);
+        if(GetNext(fetchme)!=0)
+        {
+            int result = compEngine.Compare(&fetchme, &literal,&queryOrder); 
+            if (result < 0) 
+                lpIndex = mid;
+            else if (result > 0) 
+                lpIndex = mid-1;
+            else 
+                fpIndex = mid; // even if they're equal, we need to find the first such record
+            mid = floor((lpIndex+fpIndex)/2.0);
+
+        }else
+        {
+            //No more records to search
+            return 0;
+        }
+    }
+    myfile->GetPage(readPage,mid);
+    while(GetNext(fetchme)!=0 && compEngine.Compare(&fetchme,&literal,&queryOrder))
+    {
+        //check if record satisfies CNF expression.
+       if(compEngine.Compare (&fetchme, &literal, &cnf) == 1)
+           return 1;
+    }
+    return 0;
+
+    
 }

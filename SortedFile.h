@@ -38,7 +38,8 @@ class SortedFile: public virtual GenericDBFile
 	void addToTempFile(Record& record,File *file,off_t &writeMarker,Page* writePage);
 	//method to initialise new file instance and open file instance based on fileLen
 	int  initialiseSortedFile(int fileLen,char* fpath);
-	public:
+	int BinarySearch(Record &fetchme,OrderMaker& queryOrder,CNF &cnf,Record &literal);
+    public:
 	SortedFile (); 
 
 	int Create (char *fpath, fType file_type, void *startup);
