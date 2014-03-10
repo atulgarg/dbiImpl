@@ -8,6 +8,7 @@
 #include "Defs.h"
 #include "string.h"
 #include "stdlib.h"
+#include <fstream>
 #include <iostream>
 /**
  * @method getMetaDataFileName to generate file name for metadata based on file input. Meta data will be created with name as
@@ -35,27 +36,22 @@ DBFile::DBFile () {
 int DBFile::Create (char *f_path, fType f_type, void *startup) 
 {
 	int status = 1;
-	//create a metadata file as filename.meta and record type of file and sortOrder
-	char* metaFileName = getMetaDataFileName(f_path);
-	metaFile = fopen(metaFileName,"wb");			
-	if(metaFile == NULL)
-	{
-		cerr<<"Not able to create meta data file."<<endl;
-		exit(0);
-	}
+    char * metafileName =  getMetaDataFileName(f_path);
+    ofstream outfile(metafileName,std::ofstream::out);
+    
+    int fileType = f_type;
+    outfile<<fileType<<endl;
 
-	//write filetype to metadata file.
-	int fileType = f_type;
-	fwrite(&fileType,sizeof(char),sizeof(int),metaFile);
-	fclose(metaFile);
 	//if File type spcified is heap type initialise variable with heap and call the instance's create method.
 	if(f_type == heap)
 	{
+        cout<<"create heap"<<endl;
 		dbFile = new HeapFile();
 		status = dbFile->Create(f_path,f_type,startup);	
 
 	}else if(f_type == sorted)
 	{
+        cout<<"create sorted "<<endl;
 		dbFile = new SortedFile();
 		status = dbFile->Create(f_path, f_type, startup);	
 	}
@@ -70,19 +66,22 @@ void DBFile::Load (Schema &f_schema, char *loadpath)
 int DBFile::Open (char *f_path) 
 {
 	char* metaFileName = getMetaDataFileName(f_path);
-	metaFile = fopen(metaFileName,"rb");
-	if(metaFile == NULL)
-	{
-		cerr<<"Error Opening Metadata file"<<endl;
-		exit(0);
-	}
-	//read type of file from Meta data
-	int fileType;
-	fread(&fileType,sizeof(char),sizeof(int),metaFile);
+	
+    ifstream infile(metaFileName,std::ifstream::in);
+    int fileType;
+    infile>>fileType;
+    infile.close();
+    cout<<"File Type Read:  "<<fileType<<endl;
 	if(heap == fileType)
-		dbFile = new HeapFile();
+    {
+        cout<<"heap"<<endl;
+        dbFile = new HeapFile();
+    }
 	else if(sorted == fileType)
-		dbFile = new SortedFile();
+    {
+         cout<<"sorted"<<endl;
+        dbFile = new SortedFile();
+    }
 	return dbFile->Open(f_path);	
 }
 

@@ -8,21 +8,68 @@
 #include "DBFile.h"
 #include "Defs.h"
 #include <pthread.h>
+#include<fstream>
 /**
- *  * @method writeSortedOrdertoMetadata to write sortOrder to meta data file.
- *   */
-void SortedFile::writeSortedOrdertoMetadata(FILE* metaFile,SortInfo* sortInfo)
+ * @method writeSortedOrdertoMetadata to write sortOrder to meta data file.
+ * @param FILE * pointing to already open file for reading
+ * @param SortInfo * pointing to object which needs to be written for OrderMaker instance and runLength.
+ **/
+void SortedFile::writeSortedOrdertoMetadata(ofstream outfile,SortInfo* sortInfo)
 {
+    
 	//Write the SortInfo Object to Meta Data File
-	int status = fseek(metaFile, sizeof(int), SEEK_SET);
-	fwrite(sortInfo,sizeof(char), sizeof(*sortInfo), metaFile);
+    outfile<<sortInfo->runLength;
+    
+    OrderMaker* sortOrder = sortInfo->myOrder;
+    //write sortOrder to Metadata
+    outfile<<sortOrder->numAtts;
+    for(int i=0;i<sortOrder->numAtts;i++)
+    {
+        outfile<<sortOrder->whichAtts[i]<<endl;
+        outfile<<sortOrder->whichTypes[i]<<endl;
+    }
 }
+void SortedFile::readSortedOrderToMetadata(ifstream infile)
+{
+    int fileType;
+    infile>>fileType;
+    int runLength;
+    
+    sortInfo = new SortInfo();
+    OrderMaker * sortOrder = new OrderMaker();
+    sortInfo->myOrder = sortOrder;
+    infile>>sortInfo->runLength;
+    
+    infile>>sortOrder->numAtts;
+  
+    for(int i=0;i<sortOrder->numAtts;i++)
+    {
+        infile>>sortOrder->whichAtts[i];
+        int whichType;
+        infile>>whichType;
+        if(Int == whichType)
+            sortOrder->whichTypes[i]= Int;
+        else if(Double == whichType)
+            sortOrder->whichTypes[i] == Double;
+        else
+            sortOrder->whichTypes[i] == String;
+    }
 
+    
+}
+/**
+ * @method initialiseSortedFile to initialise a new file instance with file name specified as parameter.
+ * @param fileLen parameter specifying mode in which file needs to be opened.
+ * @param fpath complete name of the file.
+ * @returns 1 for success and 0 for failure.
+ *
+ */
 int SortedFile:: initialiseSortedFile(int fileLen,char* fpath)
 {
+    queryOrderChanged = -1;
 	myfile = new File();
 	myfile->Open(fileLen,fpath);
-	if(myfile == NULL)
+    if(myfile == NULL)
 		return 0;
 	else
 		return 1;
@@ -34,22 +81,40 @@ SortedFile::SortedFile(): GenericDBFile()
 {
 	in = new Pipe(100);
 	out = new Pipe(100);
+    read_page_marker = 0;
 }
  /**
- *
+ * @method Create to create a new file instance with specified file name. Method writes 
+ * SortOrder for indexing in metadata file as specified in startup.
+ * @param f_path complete file name of the file.
+ * @param f_type type of file to be created heap/sorted.
+ * @param startup pointer to Wrapper object of run length and OrderMaker.
  */
 int SortedFile::Create (char *f_path, fType f_type, void *startup) 
 {
-	//Open a new meta data file as filename.meta and write sortOrder info to file.
-	FILE* metaFile = fopen(DBFile::getMetaDataFileName(f_path),"wb");
-	sortInfo = (SortInfo*)startup;
-	writeSortedOrdertoMetadata(metaFile, sortInfo);
-	//set the initial mode of file to read since BigQ element is empty this time.
-	fmode = read;
-	//close the metadata file since it is not required until next open.
-	fclose(metaFile);
+    //Open a new meta data file as filename.meta and write sortOrder info to file.
+    char * metadataFilename = DBFile::getMetaDataFileName(f_path);
+    ofstream metafile(metadataFilename,std::ofstream::app);
+    sortInfo = (SortInfo*)startup;
 
-	return initialiseSortedFile(0,f_path);
+    //Write the SortInfo Object to Meta Data File
+    metafile<<sortInfo->runLength<<endl;
+    
+    OrderMaker* sortOrder = sortInfo->myOrder;
+    
+    metafile<<sortOrder->numAtts<<endl;
+
+    for(int i=0;i<sortOrder->numAtts;i++)
+    {
+        metafile<<sortOrder->whichAtts[i]<<endl;
+        metafile<<sortOrder->whichTypes[i]<<endl;
+    }
+
+    //set the initial mode of file to read since BigQ element is empty this time.
+    fmode = read;
+    //close the metadata file since it is not required until next open.
+    metafile.close();
+    return initialiseSortedFile(0,f_path);
 }
 /**
  * @method Load to load all set of records from text file specified by loadpath and write it to a BigQ instance which will eventually write records
@@ -59,8 +124,8 @@ int SortedFile::Create (char *f_path, fType f_type, void *startup)
  */
 void SortedFile::Load (Schema &f_schema, char *loadpath) 
 {
-
-	FILE *txtFile = fopen(loadpath,"r");
+    queryOrderChanged = -1;
+    FILE *txtFile = fopen(loadpath,"r");
 	if(txtFile != NULL)
 	{
 		//possible error chance because of rec not getting initialised.
@@ -87,21 +152,40 @@ int SortedFile::Open (char *f_path)
 	//Get metadata file name
 	char * metaDataFileName = DBFile::getMetaDataFileName(f_path);
 	//read sortInfo struct and later extract SortOrder.
-	SortInfo sortInfo;
-	FILE* metaFile = fopen(metaDataFileName,"rb");
-	if(metaFile == NULL)
-	{
-		cerr<<"Unable to find meta data file"<<endl;
-		exit(0);
-	}
-	fseek(metaFile, sizeof(int),SEEK_SET);
-	fread(&sortInfo, sizeof(char), sizeof(SortInfo),metaFile);
-	fclose(metaFile);
+    ifstream infile(metaDataFileName,std::ifstream::in);
 
-	return initialiseSortedFile(1,f_path);
+    int fileType;
+    infile>>fileType;
+
+    sortInfo = new SortInfo();
+    OrderMaker * sortOrder = new OrderMaker();
+    sortInfo->myOrder = sortOrder; 
+    
+    infile>>sortInfo->runLength;
+    infile>>sortOrder->numAtts;
+    for(int i=0;i<sortOrder->numAtts;i++)
+    {
+        infile>>sortOrder->whichAtts[i];
+        int whichType;
+        infile>>whichType;
+        if(Int == whichType)
+            sortOrder->whichTypes[i]= Int;
+        else if(Double == whichType)
+            sortOrder->whichTypes[i] = Double;
+        else
+            sortOrder->whichTypes[i] = String;
+    }
+    infile.close();
+
+    return initialiseSortedFile(1,f_path);
 }
 
-void SortedFile::MoveFirst () {
+void SortedFile::MoveFirst () 
+{
+    mergeRecords();
+    fmode = read;
+    read_page_marker = 0;
+    queryOrderChanged = -1;
 }
 
 int SortedFile::Close () 
@@ -112,6 +196,7 @@ int SortedFile::Close ()
 		//merge records of BigQ and file before actually closing the file.
 		mergeRecords();
 	}
+    queryOrderChanged = -1;
 	myfile->Close();
 
 }
@@ -131,7 +216,8 @@ bool SortedFile::isModeChanged(Mode m)
  */
 void SortedFile::Add (Record &rec) 
 {
-	//add record to input pipe for BigQ instance.
+	queryOrderChanged = -1;
+    //add record to input pipe for BigQ instance.
 	if(isModeChanged(write))
 	{
 		initialiseForWrite();
@@ -148,6 +234,7 @@ void SortedFile::initialiseForWrite()
 	//initialise BigQ instance.
 	in = new Pipe(100);
 	out = new Pipe(100);
+    cout<<"In initialise for write"<<endl;
 	bigQ = new BigQ(*in, *out, *sortOrder, runLength);
 	fmode = write;	
 }
@@ -159,7 +246,41 @@ void SortedFile::initialiseForRead()
 	mergeRecords();
 	cleanUp();
 	MoveFirst();
+    read_page_marker = 0;
 	fmode = read;
+}
+
+int SortedFile:: GetNextRecord(Record& fromFile)
+{
+    int status = 0;
+    if(readPage == NULL)
+    {
+        readPage = new Page();
+        if(read_page_marker < myfile->GetLength()-1)
+        {
+            myfile->GetPage(readPage,read_page_marker);
+        }
+    }
+    if(readPage != NULL)
+    {
+        status = readPage->GetFirst(&fromFile);
+        //if was unable to read the next record fetch next page from disk and read.
+        if(status == 0)
+        {
+            //empty the read page reinitialise and read the next page.
+            read_page_marker++;
+            readPage->EmptyItOut();
+            if(read_page_marker < myfile->GetLength()-1)
+            {
+                myfile->GetPage(readPage,read_page_marker);
+                if(readPage!=NULL)
+                    status = readPage->GetFirst(&fromFile);
+                else
+                    return 0;
+            }
+        }
+    }
+    return status;
 }
 /**
  * method mergeRecords to merge records from existing file and BigQ instance when mode changes from write mode to read mode.
@@ -169,10 +290,11 @@ void SortedFile:: mergeRecords()
 	in->ShutDown();
 	Record fromPipe;
 	Record fromFile;
-	File* newSortedFile = new File();
-	int fileStatus = GetNext(fromFile);
+    off_t readMarker = 0;	
+    File* newSortedFile = new File();
+	int fileStatus = GetNextRecord(fromFile);
 	int pipeStatus = out->Remove(&fromPipe);
-	off_t writeMarker =0;
+	off_t writeMarker = 0;
 	Page* writePage = new Page();
 	while(fileStatus!=0 && pipeStatus !=0)
 	{
@@ -185,9 +307,10 @@ void SortedFile:: mergeRecords()
 		}else
 		{
 			addToTempFile(fromFile,newSortedFile,writeMarker,writePage);
-			fileStatus = GetNext(fromFile);
+			fileStatus = GetNextRecord(fromFile);
 		}
 	}
+    cout<<"Yahan"<<endl;
 	if(pipeStatus == 0)
 	{
 		//copy content from pipe
@@ -197,11 +320,12 @@ void SortedFile:: mergeRecords()
 		}
 	}else if(fileStatus == 0)
 	{
-		while(GetNext(fromFile)!=0)
+		while(GetNextRecord(fromFile)!=0)
 		{
 			addToTempFile(fromFile,newSortedFile,writeMarker,writePage);
 		}
 	}
+    cout<<"Yahan se"<<endl;
 	//need to check here if this works.
 	//need to delete old file instance as well.
 	myfile = newSortedFile;
@@ -230,7 +354,6 @@ void SortedFile:: cleanUp()
 	in->ShutDown();
 	out->ShutDown();
 	read_page_marker = 0;
-	write_page_marker = 0;
 	delete bigQ;
 }
 /**
@@ -240,79 +363,73 @@ void SortedFile:: cleanUp()
  */
 int SortedFile::GetNext (Record &fetchme) 
 {
-	if(isModeChanged(read))
-	{
-		initialiseForRead();
-	}
-	int status = 0;
-	if(readPage == NULL)
-        {
-                readPage = new Page();
-                if(read_page_marker < myfile->GetLength())
-                {
-                        myfile->GetPage(readPage,read_page_marker);
-                }
-        }
-        if(readPage != NULL)
-        {
-                status = readPage->GetFirst(&fetchme);
-                //if was unable to read the next record fetch next page from disk and read.
-                if(status == 0)
-                {
-                        //empty the read page reinitialise and read the next page.
-                        read_page_marker++;
-                        readPage->EmptyItOut();
-                        if(read_page_marker < myfile->GetLength()-1)
-                        {
-                                myfile->GetPage(readPage,read_page_marker);
-                                if(readPage!=NULL)
-                                        status = readPage->GetFirst(&fetchme);
-                                else
-                                        return 0;
-                        }
-                }
-        }
-        return status;	
+    if(isModeChanged(read))
+    {
+        initialiseForRead();
+    }
+    queryOrderChanged = -1; 
+    return GetNextRecord(fetchme);
 }
-
+/**
+ * @method GetNext to get next record in file which matches the passed literal.
+ * @param Record object in which next record is fetched.
+ * @param CNF instance to match the condition
+ * @param Record literal to match value for the condition.
+ * @returns 1 for success else 0.
+ */
 int SortedFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) 
 {
-    OrderMaker queryOrder;
-    if(cnf.QueryMaker(queryOrder,*(sortInfo->myOrder)) == 0)
+    bool searchRequired = false;
+    if(queryOrderChanged == -1)
+    {
+        queryOrderChanged = cnf.QueryMaker(queryOrder,*(sortInfo->myOrder));
+        searchRequired = true;
+    }
+    if(queryOrderChanged == 0)
        return GetNext(fetchme);
     else
     {
         //Binary Search
-        return BinarySearch(fetchme, queryOrder, cnf, literal);
+        return BinarySearch(fetchme, cnf, literal,searchRequired);
     }
 }
-int SortedFile::BinarySearch(Record &fetchme,OrderMaker& queryOrder,CNF &cnf,Record &literal)
+/**
+ * @method BinarySearch to search for first record in file which matches
+ * @param fetchme fetch next matching record in this instance.
+ * @param CNF cnf expression to match for record.
+ * @param literal Record instance to use for comparison.
+ * @returns 1 for success and 0 if fails to get next record.
+ */
+int SortedFile::BinarySearch(Record &fetchme,CNF &cnf,Record &literal,bool searchRequired)
 {
     ComparisonEngine compEngine;
-    off_t fpIndex = 0;
+    off_t fpIndex = read_page_marker;
     off_t lpIndex = myfile->GetLength()-1;
     off_t mid = floor((fpIndex + lpIndex)/2.0);
-    while(lpIndex<fpIndex)
+    if(searchRequired)
     {
-        myfile->GetPage(readPage,mid);
-        if(GetNext(fetchme)!=0)
+        while(lpIndex <= fpIndex)
         {
-            int result = compEngine.Compare(&fetchme, &literal,&queryOrder); 
-            if (result < 0) 
-                lpIndex = mid;
-            else if (result > 0) 
-                lpIndex = mid-1;
-            else 
-                fpIndex = mid; // even if they're equal, we need to find the first such record
-            mid = floor((lpIndex+fpIndex)/2.0);
+            myfile->GetPage(readPage,mid);
+            if(GetNext(fetchme)!=0)
+            {
+                int result = compEngine.Compare(&fetchme, &literal,&queryOrder); 
+                if (result < 0) 
+                    lpIndex = mid;
+                else if (result > 0) 
+                    lpIndex = mid-1;
+                else 
+                    fpIndex = mid; // even if they're equal, we need to find the first such record
+                mid = floor((lpIndex+fpIndex)/2.0);
 
-        }else
-        {
-            //No more records to search
-            return 0;
+            }else
+            {
+                //No more records to search
+                return 0;
+            }
         }
+        myfile->GetPage(readPage,mid);
     }
-    myfile->GetPage(readPage,mid);
     while(GetNext(fetchme)!=0 && compEngine.Compare(&fetchme,&literal,&queryOrder))
     {
         //check if record satisfies CNF expression.

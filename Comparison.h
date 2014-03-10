@@ -42,7 +42,7 @@ class OrderMaker {
 
 	friend class ComparisonEngine;
 	friend class CNF;
-
+    friend class SortedFile;
 	int numAtts;
 
 	int whichAtts[MAX_ANDS];

@@ -161,11 +161,13 @@ void sortAndCopyToFile(vector<RecordWrapper*>& list,File* file,vector<pair<off_t
 			page.Append(&tempRec);
 		}
 	}
-	//Add the last page to file and increameant counter.
+	
+    //Add the last page to file and increameant counter.
 	file->AddPage(&page,nextPageMarker);
 	nextPageMarker++;
 	off_t lastPage = nextPageMarker-1;
-	//pair to store first and last page of each run.
+	
+    //pair to store first and last page of each run.
 	pair<off_t,off_t> runLengthPair(initialPage,lastPage);
 	runLengthInfo.push_back(runLengthPair);
 	page.EmptyItOut();
@@ -186,7 +188,8 @@ void mergeRunsFromFile(File* file, int runLength, Pipe& out, OrderMaker& sortOrd
 
 	//Array of Pages to keep hold of current Page from each of run.
 	Page* pageBuffers = new Page[numRuns];
-	//initialise each page with corresponding page in File.
+	
+    //initialise each page with corresponding page in File.
 	vector<off_t> offset;
 	
 	//initialise offset array to keep track of next page for each run.
@@ -195,9 +198,11 @@ void mergeRunsFromFile(File* file, int runLength, Pipe& out, OrderMaker& sortOrd
 	for(int i=0;i<numRuns;i++)
 	{
 		offset.push_back(runLengthInfo[i].first);
-		//Get the Page for offset in Buffer.
+		
+        //Get the Page for offset in Buffer.
 		file->GetPage(&(pageBuffers[i]),offset[i]);
-		//For each of the page get the first record in priority queue.
+		
+        //For each of the page get the first record in priority queue.
 		Record* record = new Record();
 		pageBuffers[i].GetFirst(record);
 		RecordWrapper* rWrap = new RecordWrapper(record,&sortOrder);
