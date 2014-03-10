@@ -150,7 +150,6 @@ void SortedFile::Load (Schema &f_schema, char *loadpath)
  */
 int SortedFile::Open (char *f_path) 
 {
-	cout<<"SortedFile::Open :begin()"<<endl;
     //Get metadata file name
 	char * metaDataFileName = DBFile::getMetaDataFileName(f_path);
 	//read sortInfo struct and later extract SortOrder.
@@ -178,14 +177,12 @@ int SortedFile::Open (char *f_path)
             sortOrder->whichTypes[i] = String;
     }
     infile.close();
-    cout<<"SortedFile:: Open : end()"<<endl;
     fmode = read;
     return initialiseSortedFile(1,f_path);
 }
 
 void SortedFile::MoveFirst () 
 {
-    cout<<"MoveFirst::Open"<<endl;
     if(isModeChanged(read)) 
     {
         initialiseForRead();
@@ -193,14 +190,12 @@ void SortedFile::MoveFirst ()
         //fmode = read;
     }
     read_page_marker = 0;
+    readPage = NULL;
     queryOrderChanged = -1;
-    cout<<"File Length : "<<myfile->GetLength()<<endl;
-    cout<<"MoveFirst::End()"<<endl;
 }
 
 int SortedFile::Close () 
 {
-    cout<<"SortedFile:Close :: Begin()"<<endl;
 	//if there are records in BigQ instance.
 	if(fmode == write)
 	{
@@ -208,9 +203,7 @@ int SortedFile::Close ()
 		mergeRecords();
 	}
     queryOrderChanged = -1;
-    cout<<"File length before close" <<myfile->GetLength()<<endl;
 	myfile->Close();
-    cout<<"SortedFile::close ::end()"<<endl;
 }
 /**
  * @method isModeChanged to check if mode is changed from previous mode.
@@ -228,7 +221,6 @@ bool SortedFile::isModeChanged(Mode m)
  */
 void SortedFile::Add (Record &rec) 
 {
-    cout<<"Add:Begin"<<endl;
 	queryOrderChanged = -1;
     //add record to input pipe for BigQ instance.
 	if(isModeChanged(write))
@@ -236,7 +228,6 @@ void SortedFile::Add (Record &rec)
 		initialiseForWrite();
 	}
 	in->Insert(&rec);
-    cout<<"Add:End():"<<endl;
 }
 /**
  * @method initialise to initialize instance of BigQ instance and input and output pipe.
@@ -248,7 +239,6 @@ void SortedFile::initialiseForWrite()
 	//initialise BigQ instance.
 	in = new Pipe(100);
 	out = new Pipe(100);
-    cout<<"In initialise for write"<<endl;
 	bigQ = new BigQ(*in, *out, *sortOrder, runLength);
 	fmode = write;	
 }
@@ -259,7 +249,7 @@ void SortedFile::initialiseForRead()
 {
 	mergeRecords();
 	cleanUp();
-	MoveFirst();
+	//MoveFirst();
     read_page_marker = 0;
 	fmode = read;
 }
@@ -281,13 +271,14 @@ int SortedFile:: GetNextRecord(Record& fromFile)
         //if was unable to read the next record fetch next page from disk and read.
         if(status == 0)
         {
+            cout<<"Status == 0 "<<endl;
             //empty the read page reinitialise and read the next page.
             read_page_marker++;
             readPage->EmptyItOut();
             if(read_page_marker < myfile->GetLength()-1)
             {
                 myfile->GetPage(readPage,read_page_marker);
-                if(readPage!=NULL)
+                if(readPage != NULL)
                     status = readPage->GetFirst(&fromFile);
                 else
                     return 0;
@@ -301,22 +292,24 @@ int SortedFile:: GetNextRecord(Record& fromFile)
  */
 void SortedFile:: mergeRecords()
 {
-    cout<<"MergeRecords : Begin()"<<endl;
 	in->ShutDown();
 	Record fromPipe;
 	Record fromFile;
     off_t readMarker = 0;	
+    //create temporary file to push new records
     File* newSortedFile = new File();
     newSortedFile->Open(0,"temp.dat");
-	int fileStatus = GetNextRecord(fromFile);
-	cout<<"after getnext Record"<<endl;
+	
+    //initialise record from file.
+    int fileStatus = GetNextRecord(fromFile);
+    
+    //initialise record from pip
     int pipeStatus = out->Remove(&fromPipe);
-    cout<<"after removing from Pipe()"<<endl;
-	off_t writeMarker = 0;
+	
+    off_t writeMarker = 0;
 	Page* writePage = new Page();
 	while(fileStatus != 0 && pipeStatus != 0)
 	{
-        cout<<"inside while for both"<<endl;
 		RecordWrapper* fromPipeWrapper = new RecordWrapper(&fromPipe,sortInfo->myOrder);
 		RecordWrapper* fromFileWrapper = new RecordWrapper(&fromFile,sortInfo->myOrder);
 		if(RecordWrapper::compareRecords(fromPipeWrapper,fromFileWrapper) > 0) 
@@ -329,27 +322,22 @@ void SortedFile:: mergeRecords()
 			fileStatus = GetNextRecord(fromFile);
 		}
 	}
-    cout<<"Yahan"<<endl;
 	if(fileStatus == 0)
 	{
 		//copy content from pipe
-		while(out->Remove(&fromPipe)!=0)
+	    do	
 		{
-            cout<<"abcd"<<endl;
 			addToTempFile(fromPipe,newSortedFile,writeMarker,writePage);
-		}
+		}while(out->Remove(&fromPipe)!=0);
 	}else if(pipeStatus == 0)
 	{
-		while(GetNextRecord(fromFile)!=0)
+        do
 		{
-            cout<<"adec"<<endl;
 			addToTempFile(fromFile,newSortedFile,writeMarker,writePage);
-		}
+		}while(GetNextRecord(fromFile)!=0);
+
 	}
-    cout<<"Yahan se"<<endl;
     newSortedFile->AddPage(writePage,writeMarker);
-	//need to check here if this works.
-	//need to delete old file instance as well.
     newSortedFile->Close();
     rename("temp.dat", fpath);
 
@@ -364,9 +352,11 @@ void SortedFile::addToTempFile(Record  &record,File *file,off_t &writeMarker,Pag
         
         //First try adding the record....if no more records can be added to current page then get a new page and try adding there 
         //before that add that page to file.
+        static int i =0;
+        i++;
+        cout<<"count "<<i;
         if(writePage->Append(&record) == 0)
         {
-                cout<<"Append hua page"<<writeMarker<<endl;
                 //add the write page to file and and allocate new page here to add record.
                 file->AddPage(writePage,writeMarker);
                 writePage->EmptyItOut();
@@ -391,14 +381,15 @@ void SortedFile:: cleanUp()
  */
 int SortedFile::GetNext (Record &fetchme) 
 {
-    cout<<"GetNext::Begin"<<endl;
+    static int i = 0;
+    i++;
     if(isModeChanged(read))
     {
         initialiseForRead();
     }
     queryOrderChanged = -1; 
     return GetNextRecord(fetchme);
-    cout<<"GetNext::End"<<endl;
+   
 }
 /**
  * @method GetNext to get next record in file which matches the passed literal.
@@ -416,12 +407,19 @@ int SortedFile::GetNext (Record &fetchme, CNF &cnf, Record &literal)
         searchRequired = true;
     }
     if(queryOrderChanged == 0)
-       return GetNext(fetchme);
-    else
     {
-        //Binary Search
+        while(GetNextRecord(fetchme)!=0)
+        {
+            ComparisonEngine compEngine;
+            //check if record satisfies CNF expression.
+            if(compEngine.Compare (&fetchme, &literal, &cnf) == 1)
+                return 1;
+        }
+    }else
+    {  //Binary Search
         return BinarySearch(fetchme, cnf, literal,searchRequired);
     }
+    
 }
 /**
  * @method BinarySearch to search for first record in file which matches
@@ -443,7 +441,8 @@ int SortedFile::BinarySearch(Record &fetchme,CNF &cnf,Record &literal,bool searc
         while(lpIndex <= fpIndex)
         {
             myfile->GetPage(readPage,mid);
-            if(GetNext(fetchme)!=0)
+            read_page_marker = mid;
+            if(GetNextRecord(fetchme)!=0)
             {
                 int result = compEngine.Compare(&fetchme, &literal,&queryOrder); 
                 if (result < 0) 
@@ -461,14 +460,18 @@ int SortedFile::BinarySearch(Record &fetchme,CNF &cnf,Record &literal,bool searc
             }
         }
         myfile->GetPage(readPage,mid);
+        read_page_marker = mid;
     }
-    while(GetNext(fetchme)!=0 && compEngine.Compare(&fetchme,&literal,&queryOrder))
+    while(GetNextRecord(fetchme)!=0)
     {
-        //check if record satisfies CNF expression.
-       if(compEngine.Compare (&fetchme, &literal, &cnf) == 1)
-           return 1;
+        if (compEngine.Compare(&fetchme,&literal,&queryOrder) <= 1 )
+        {
+            //check if record satisfies CNF expression.
+            if(compEngine.Compare (&fetchme, &literal, &cnf) == 1)
+                return 1;
+        }
     }
     return 0;
 
-    
+
 }

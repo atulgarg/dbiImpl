@@ -23,7 +23,7 @@ int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs
 		int val1Int, val2Int;
 		double val1Double, val2Double;
 		
-		// now check the type and do the comparison
+	    // now check the type and do the comparison
 		switch (orderUs->whichTypes[i]) {
 	
 			// first case: we are dealing with integers
