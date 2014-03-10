@@ -12,12 +12,15 @@ int add_data (FILE *src, int numrecs, int &res) {
 
 	int proc = 0;
 	int xx = 20000;
-	while ((res = temp.SuckNextRecord (rel->schema (), src)) && ++proc < numrecs) {
+	while ((res = temp.SuckNextRecord (rel->schema (), src)) && proc++ < numrecs) {
 		dbfile.Add (temp);
 		if (proc == xx) cerr << "\t ";
 		if (proc % xx == 0) cerr << ".";
 	}
-
+    if(res == 1) {
+        dbfile.Add (temp);
+        proc++;
+    }
 	dbfile.Close ();
 	return proc;
 }
@@ -76,14 +79,15 @@ void test1 () {
 
 // sequential scan of a DBfile 
 void test2 () {
-
+    cout<<"Begin::test2"<<endl;
 	cout << " scan : " << rel->path() << "\n";
 	DBFile dbfile;
 	dbfile.Open (rel->path());
-	dbfile.MoveFirst ();
-
+	cout<<"oppen ke baad"<<endl;
+    dbfile.MoveFirst ();
+    cout<<"test file move first ke baad"<<endl;
 	Record temp;
-
+    int res = 1;
 	int cnt = 0;
 	cerr << "\t";
 	while (dbfile.GetNext (temp) && ++cnt) {

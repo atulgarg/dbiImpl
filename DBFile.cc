@@ -45,13 +45,11 @@ int DBFile::Create (char *f_path, fType f_type, void *startup)
 	//if File type spcified is heap type initialise variable with heap and call the instance's create method.
 	if(f_type == heap)
 	{
-        cout<<"create heap"<<endl;
 		dbFile = new HeapFile();
 		status = dbFile->Create(f_path,f_type,startup);	
 
 	}else if(f_type == sorted)
 	{
-        cout<<"create sorted "<<endl;
 		dbFile = new SortedFile();
 		status = dbFile->Create(f_path, f_type, startup);	
 	}
@@ -70,16 +68,15 @@ int DBFile::Open (char *f_path)
     ifstream infile(metaFileName,std::ifstream::in);
     int fileType;
     infile>>fileType;
+    cout<<"file type read"<<fileType<<endl;
     infile.close();
-    cout<<"File Type Read:  "<<fileType<<endl;
 	if(heap == fileType)
     {
-        cout<<"heap"<<endl;
         dbFile = new HeapFile();
     }
 	else if(sorted == fileType)
     {
-         cout<<"sorted"<<endl;
+        cout<<"open DBfile sorted"<<endl;
         dbFile = new SortedFile();
     }
 	return dbFile->Open(f_path);	

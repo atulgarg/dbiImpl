@@ -27,7 +27,7 @@ class SortedFile: public virtual GenericDBFile
         SortInfo* sortInfo;                 // Struct Wrapper to store info for OrderMaker and runlength.
         OrderMaker queryOrder;
         int  queryOrderChanged = -1;
-
+        char* fpath;
         //method to write sortInfo struct to metadata file.
         void writeSortedOrdertoMetadata(ofstream outfile,SortInfo *sortInfo);
         
