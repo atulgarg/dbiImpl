@@ -1,0 +1,11 @@
+ 
+** IMPORTANT: MAKE SURE THE INFORMATION BELOW IS CORRECT **
+ catalog location: 	catalog
+ tpch files dir: 	/home/atgarg/tmp/dbi/DATA/10M
+ heap files dir: 	
+ 
+
+ query4 
+OutPipe Shutdown ho gayi select File main
+RunJoin:Begin
+sortOrder not 0 initialising Bigq

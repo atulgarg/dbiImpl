@@ -1,13 +1,12 @@
 #include "File.h"
 #include "TwoWayList.cc"
-#include<unistd.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
 #include <iostream>
 #include <stdlib.h>
-
 
 
 Page :: Page () {
@@ -78,6 +77,7 @@ int Page :: Append (Record *addMe) {
 	curSizeInBytes += ((int *) b)[0];
 	myRecs->Insert(addMe);
 	numRecs++;
+
 	return 1;	
 }
 
@@ -86,6 +86,7 @@ void Page :: ToBinary (char *bits) {
 
 	// first write the number of records on the page
 	((int *) bits)[0] = numRecs;
+
 	char *curPos = bits + sizeof (int);
 
 	// and copy the records one-by-one
@@ -107,6 +108,7 @@ void Page :: FromBinary (char *bits) {
 
 	// first read the number of records on the page
 	numRecs = ((int *) bits)[0];
+	//subi //cerr << " numRecs in page " << numRecs << endl;
 
 	// sanity check
 	if (numRecs > 1000000 || numRecs < 0) {
@@ -164,6 +166,8 @@ void File :: GetPage (Page *putItHere, off_t whichPage) {
 
 	// this is because the first page has no data
 	whichPage++;
+	//subi// cerr << "get_pg " << whichPage << " file_sz " << curLength << endl;
+
 	if (whichPage >= curLength) {
 		cerr << "whichPage " << whichPage << " length " << curLength << endl;
 		cerr << "BAD: you tried to read past the end of the file\n";
@@ -198,12 +202,14 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 		// do the zeroing
 		for (off_t i = curLength; i < whichPage; i++) {
 			int foo = 0;
-			lseek (myFilDes,PAGE_SIZE * i,SEEK_SET);
+			lseek (myFilDes, PAGE_SIZE * i, SEEK_SET);
 			write (myFilDes, &foo, sizeof (int));
 		}
+
 		// set the size
 		curLength = whichPage + 1;	
 	}
+
 	// now write the page
 	char *bits = new (std::nothrow) char[PAGE_SIZE];
 	if (bits == NULL)
@@ -211,6 +217,7 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 		cout << "ERROR : Not enough memory. EXIT !!!\n";
 		exit(1);
 	}
+
 	addMe->ToBinary (bits);
 	lseek (myFilDes, PAGE_SIZE * whichPage, SEEK_SET);
 	write (myFilDes, bits, PAGE_SIZE);

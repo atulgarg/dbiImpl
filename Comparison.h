@@ -43,7 +43,8 @@ class OrderMaker {
 	friend class ComparisonEngine;
 	friend class CNF;
     friend class SortedFile;
-	int numAtts;
+	friend void* RunGroupBy(void *);
+    int numAtts;
 
 	int whichAtts[MAX_ANDS];
 	Type whichTypes[MAX_ANDS];

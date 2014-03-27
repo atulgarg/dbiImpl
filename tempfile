@@ -1,0 +1,50 @@
+Join * joinObj = (Join*) sf;
+    Pipe* outPipe = joinObj->outPipe;
+    OrderMaker leftOrder;
+
+    int runLen = joinObj->runlen;
+    CNF* selOp = joinObj->selOp;
+    Pipe * inPipeL = joinObj->inPipeL;
+    Pipe outPipeL(100);
+
+    OrderMaker rightOrder;
+    Pipe * inPipeR = joinObj->outPipe;
+    Pipe outPipeR(100);
+
+    ComparisonEngine compEngine;
+    Record lrecord;
+    Record rrecord;
+    int st1,st2;
+
+    DBFile dbfile;
+
+    if(selOp->GetSortOrders(leftOrder,rightOrder) != 0)
+    {
+        BigQ bigqL(*inPipeL,outPipeL,leftOrder,runLen);
+        BigQ bigqR(*inPipeR, outPipeR,rightOrder, runLen);
+
+        st1 = outPipeL.Remove(&lrecord);
+        st2 = outPipeR.Remove(&rrecord);
+
+        if(st1 !=0 && st2!=0)
+        {
+            int status = compEngine.Compare(&lrecord, &leftOrder, &rrecord, &rightOrder);    
+            if(status < 0)
+                while(outPipeL.Remove(&lrecord)!=0 && compEngine.Compare(&lrecord,&leftOrder, &rrecord, &rightOrder) <0);
+            else if( status > 0)
+                while(outPipeR.Remove(&rrecord)!=0 && compEngine.Compare(&lrecord, &leftOrder, &rrecord, &rightOrder) > 0);
+        }
+        Record prevRecord;
+        //while there are more records in left table.
+        while(outPipeL.Remove(&lrecord)!=0)
+        {
+            //if record is equal to last record get from dbfile.
+            if(compEngine.Compare(&lrecord, &leftOrder, &prevRecord , &rightOrder) == 0)
+            {
+                while(dbfile.GetNext(rrecord) == 1)
+                {
+                    if(compEngine.Compare(&lrecord, &leftOrder, &rrecord, &rightOrder) == 0)
+                    {
+                        Record tempRecord;
+                        tempRecord.MergeRecords(&lrecord, &rrecord, );
+                        outPipe->Insert(&tempRecord); 

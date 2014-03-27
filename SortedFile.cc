@@ -9,56 +9,8 @@
 #include "Defs.h"
 #include <pthread.h>
 #include<fstream>
-/**
- * @method writeSortedOrdertoMetadata to write sortOrder to meta data file.
- * @param FILE * pointing to already open file for reading
- * @param SortInfo * pointing to object which needs to be written for OrderMaker instance and runLength.
- **/
-void SortedFile::writeSortedOrdertoMetadata(ofstream outfile,SortInfo* sortInfo)
-{
-    
-	//Write the SortInfo Object to Meta Data File
-    outfile<<sortInfo->runLength;
-    
-    OrderMaker* sortOrder = sortInfo->myOrder;
-    //write sortOrder to Metadata
-    outfile<<sortOrder->numAtts;
-    for(int i=0;i<sortOrder->numAtts;i++)
-    {
-        outfile<<sortOrder->whichAtts[i]<<endl;
-        outfile<<sortOrder->whichTypes[i]<<endl;
-    }
-}
-void SortedFile::readSortedOrderToMetadata(ifstream infile)
-{
-    int fileType;
-    infile>>fileType;
-    int runLength;
-    
-    sortInfo = new SortInfo();
-    OrderMaker * sortOrder = new OrderMaker();
-    sortInfo->myOrder = sortOrder;
-    infile>>sortInfo->runLength;
-    
-    infile>>sortOrder->numAtts;
-  
-    for(int i=0;i<sortOrder->numAtts;i++)
-    {
-        infile>>sortOrder->whichAtts[i];
-        int whichType;
-        infile>>whichType;
-        if(Int == whichType)
-            sortOrder->whichTypes[i]= Int;
-        else if(Double == whichType)
-            sortOrder->whichTypes[i] == Double;
-        else
-            sortOrder->whichTypes[i] == String;
-    }
 
-    
-}
-/**
- * @method initialiseSortedFile to initialise a new file instance with file name specified as parameter.
+ /* @method initialiseSortedFile to initialise a new file instance with file name specified as parameter.
  * @param fileLen parameter specifying mode in which file needs to be opened.
  * @param fpath complete name of the file.
  * @returns 1 for success and 0 for failure.
@@ -113,8 +65,10 @@ int SortedFile::Create (char *f_path, fType f_type, void *startup)
 
     //set the initial mode of file to read since BigQ element is empty this time.
     fmode = read;
+   
     //close the metadata file since it is not required until next open.
     metafile.close();
+    
     return initialiseSortedFile(0,f_path);
 }
 /**
@@ -152,7 +106,8 @@ int SortedFile::Open (char *f_path)
 {
     //Get metadata file name
 	char * metaDataFileName = DBFile::getMetaDataFileName(f_path);
-	//read sortInfo struct and later extract SortOrder.
+	
+    //read sortInfo struct and later extract SortOrder.
     ifstream infile(metaDataFileName,std::ifstream::in);
 
     int fileType;
@@ -177,7 +132,10 @@ int SortedFile::Open (char *f_path)
             sortOrder->whichTypes[i] = String;
     }
     infile.close();
+    
+    //set the initial mode for file as read mode.
     fmode = read;
+    
     return initialiseSortedFile(1,f_path);
 }
 
@@ -186,9 +144,8 @@ void SortedFile::MoveFirst ()
     if(isModeChanged(read)) 
     {
         initialiseForRead();
-        //mergeRecords();
-        //fmode = read;
     }
+    
     read_page_marker = 0;
     readPage = NULL;
     queryOrderChanged = -1;
@@ -251,7 +208,8 @@ void SortedFile::initialiseForRead()
 	cleanUp();
 	//MoveFirst();
     read_page_marker = 0;
-	fmode = read;
+	readPage = NULL;
+    fmode = read;
 }
 
 int SortedFile:: GetNextRecord(Record& fromFile)
@@ -271,7 +229,6 @@ int SortedFile:: GetNextRecord(Record& fromFile)
         //if was unable to read the next record fetch next page from disk and read.
         if(status == 0)
         {
-            cout<<"Status == 0 "<<endl;
             //empty the read page reinitialise and read the next page.
             read_page_marker++;
             readPage->EmptyItOut();
@@ -342,7 +299,6 @@ void SortedFile:: mergeRecords()
     rename("temp.dat", fpath);
 
 	myfile = newSortedFile;
-    cout<<newSortedFile->GetLength()<<endl;
 }
 /**
  * @method to add new record to file.
@@ -352,9 +308,6 @@ void SortedFile::addToTempFile(Record  &record,File *file,off_t &writeMarker,Pag
         
         //First try adding the record....if no more records can be added to current page then get a new page and try adding there 
         //before that add that page to file.
-        static int i =0;
-        i++;
-        cout<<"count "<<i;
         if(writePage->Append(&record) == 0)
         {
                 //add the write page to file and and allocate new page here to add record.
@@ -381,8 +334,6 @@ void SortedFile:: cleanUp()
  */
 int SortedFile::GetNext (Record &fetchme) 
 {
-    static int i = 0;
-    i++;
     if(isModeChanged(read))
     {
         initialiseForRead();
@@ -419,6 +370,7 @@ int SortedFile::GetNext (Record &fetchme, CNF &cnf, Record &literal)
     {  //Binary Search
         return BinarySearch(fetchme, cnf, literal,searchRequired);
     }
+    //cout<<"GetNext::End"<<endl;
     
 }
 /**
@@ -430,8 +382,9 @@ int SortedFile::GetNext (Record &fetchme, CNF &cnf, Record &literal)
  */
 int SortedFile::BinarySearch(Record &fetchme,CNF &cnf,Record &literal,bool searchRequired)
 {
+    cout<<"BinarySearch::Begin:"<<endl;
     ComparisonEngine compEngine;
-    off_t fpIndex = read_page_marker;
+    off_t fpIndex = 0;//read_page_marker;
     off_t lpIndex = myfile->GetLength()-1;
     off_t mid = floor((fpIndex + lpIndex)/2.0);
     if(readPage == NULL)
@@ -472,6 +425,5 @@ int SortedFile::BinarySearch(Record &fetchme,CNF &cnf,Record &literal,bool searc
         }
     }
     return 0;
-
 
 }

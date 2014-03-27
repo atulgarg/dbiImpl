@@ -10,6 +10,7 @@
 // returns a -1, 0, or 1 depending upon whether left is less then, equal to, or greater
 // than right, depending upon the OrderMaker
 int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs) {
+
 	char *val1, *val2;
 
 	char *left_bits = left->GetBits();
@@ -23,7 +24,7 @@ int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs
 		int val1Int, val2Int;
 		double val1Double, val2Double;
 		
-	    // now check the type and do the comparison
+		// now check the type and do the comparison
 		switch (orderUs->whichTypes[i]) {
 	
 			// first case: we are dealing with integers
@@ -32,7 +33,7 @@ int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs
 			// cast the two bit strings to ints
 			val1Int = *((int *) val1);
 			val2Int = *((int *) val2);
-
+	
 			// and do the comparison
 			if (val1Int < val2Int) 
 				return -1;
@@ -48,7 +49,7 @@ int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs
 			// cast the two bit strings to doubles
 			val1Double = *((double *) val1);
 			val2Double = *((double *) val2);
-
+	
 			// and do the comparison
 			if (val1Double < val2Double)
 				return -1;
@@ -61,7 +62,6 @@ int ComparisonEngine :: Compare(Record *left, Record *right, OrderMaker *orderUs
 			// last case: dealing with strings
 			default:
 			int sc = strcmp (val1, val2);
-			
 			if (sc != 0)
 				return sc;
 

@@ -55,12 +55,20 @@ int DBFile::Create (char *f_path, fType f_type, void *startup)
 	}
 	return status;
 }
-
+/**
+ * @method to load all the records from a text file specified to a binary file in sorted
+ * order based on sort order specified.
+ *
+ */
 void DBFile::Load (Schema &f_schema, char *loadpath) 
 {
 	dbFile->Load(f_schema,loadpath);
 }
-
+/**
+ * @method opens a existing bin file, reads metadata associated with file and initialises
+ * genericdbfile instance based on the type of file specified in metadata.
+ *
+ */
 int DBFile::Open (char *f_path) 
 {
 	char* metaFileName = getMetaDataFileName(f_path);
@@ -68,7 +76,6 @@ int DBFile::Open (char *f_path)
     ifstream infile(metaFileName,std::ifstream::in);
     int fileType;
     infile>>fileType;
-    cout<<"file type read"<<fileType<<endl;
     infile.close();
 	if(heap == fileType)
     {
@@ -76,23 +83,25 @@ int DBFile::Open (char *f_path)
     }
 	else if(sorted == fileType)
     {
-        cout<<"open DBfile sorted"<<endl;
         dbFile = new SortedFile();
     }
 	return dbFile->Open(f_path);	
 }
-
+/**
+ * @method MoveFirst to move to first record.
+ */
 void DBFile::MoveFirst () 
 {
 	dbFile->MoveFirst();
 }
-
+/**
+ * @method close to close the dbfile instance which is delegated to
+ * corresponding object.
+ */
 int DBFile::Close () 
 {
-	//close metadata file and respective open DBFile.
-	//int metaStatus = fclose(metaFile);
 	int dbfileStatus = dbFile->Close();
-	return dbfileStatus;//(metaStatus && dbfileStatus);
+	return dbfileStatus;
 }
 
 void DBFile::Add (Record &rec) 
