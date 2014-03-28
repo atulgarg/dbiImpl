@@ -356,7 +356,6 @@ void Record :: MergeRecords (Record *left, Record *right, int numAttsLeft, int n
 
 	// first, figure out the size of the new record
 	int totSpace = sizeof (int) * (numAttsToKeep + 1);
-
 	int numAttsNow = numAttsLeft;
 	char *rec_bits = left->bits;
 

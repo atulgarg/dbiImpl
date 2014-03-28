@@ -36,14 +36,15 @@ public:
 
 
 class Schema;
-
+class Record;
 // This structure encapsulates a sort order for records
 class OrderMaker {
 
 	friend class ComparisonEngine;
 	friend class CNF;
     friend class SortedFile;
-	friend void* RunGroupBy(void *);
+    friend void q6 (); 	
+    friend void* RunGroupBy(void *); 
     int numAtts;
 
 	int whichAtts[MAX_ANDS];
@@ -58,6 +59,7 @@ public:
 	// based upon ALL of their attributes
 	OrderMaker(Schema *schema);
 
+    int GetNumAtts();
 	// print to the screen
 	void Print ();
 };

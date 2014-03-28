@@ -535,6 +535,7 @@ void* RunSum(void * sr)
  */
 void GroupBy::Run(Pipe &inPipe, Pipe &outPipe, OrderMaker &groupAtts, Function &computeMe)
 {
+    cout<<"GroupBy : Begin:"<<endl;
     this->inPipe = &(inPipe);
     this->outPipe = &(outPipe);
     this->groupAtts = &(groupAtts);
@@ -570,12 +571,97 @@ void GroupBy::Use_n_Pages(int n)
  */
 void* RunGroupBy(void *gb)
 {
+printMsg("groupBy_Method called..............................", "");
+	int totalRecords_debug=0, recGrouped_debug=0;
+
+	GroupBy *groupByObj = (GroupBy*)thisGroupBy;
+	Pipe sortedPipe(PIPE_SIZE);
+
+	printMsg("GroupBy::Sorting records with run length: ", groupByObj->runLength_groupBy); //for debugging
+	BigQ sort_groupBy(*(groupByObj->inPipe_groupBy), sortedPipe, *(groupByObj->groupAtts_groupBy), groupByObj->runLength_groupBy); //sort the records
+
+	Record currentRecord, nextRecord, newRecord, tempRecord;
+	double totalSum = 0, doubleResult=0;
+	int intResult=0, numAttsRight, *attsToKeepRight, numAttsToKeep, numAttsInRecord;
+	ComparisonEngine compareRecords;
+
+
+
+	//Prepare sorted list for merging records(MergeRecords (Record *left, Record *right, int numAttsLeft,int numAttsRight, int *attsToKeep, int numAttsToKeep, int startOfRight);
+	//First attribute is sum and next attributes are of order maker
+	attsToKeepRight = (groupByObj->groupAtts_groupBy)->attsList(); //attributes to keep in given record
+	numAttsRight = (groupByObj->groupAtts_groupBy)->numOfAtts(); //number of attributes to be kept 
+	//cout<<"List of attributes to keep (from ordermaker) "<<endl;
+	//for(int i=0; i<numAttsRight; i++)
+	//	cout<<attsToKeepRight[i]<<" ";
+
+	numAttsToKeep = numAttsRight + 1;	
+	int *attsToKeep = new int[numAttsToKeep];
+	attsToKeep[0] = 0;
+
+	for(int j=1; j<numAttsToKeep; j++)
+		attsToKeep[j] = attsToKeepRight[j-1];
+
+	/*cout<<"List of attributes to keep (final list): "<<endl;
+	for(int k=0; k<numAttsToKeep; k++)
+		cout<<attsToKeep[k]<<" "; */
+
+	Attribute DS = {(char*)"sum", Double}; //create new attribute, assuming type to be double
+	Schema totalSum_schema ("total_sum", 1, &DS); //create new in memory schema
+	char rec[70]; //assuming that sum won't be more than 68 digits
+
+	if(sortedPipe.Remove(&currentRecord)){ //if there exists record
+		(groupByObj->computeMe_groupBy)->Apply(currentRecord, intResult, doubleResult);  	
+		totalSum += (intResult + doubleResult); //one of them would be zero
+		numAttsInRecord = currentRecord.numOfAttInRecord(); //number of attributes in the record
+		intResult = doubleResult = 0;
+		totalRecords_debug++;
+	}
+
+	printMsg("GroupBy::Number of attributes in the record: ", numAttsInRecord); //debugging
+
+
+	while(sortedPipe.Remove(&nextRecord)){
+		if( (compareRecords.Compare(&currentRecord, &nextRecord, groupByObj->groupAtts_groupBy)) != 0){ //records are not equal
+			printMsg("GroupBy::Unequal Records! Total sum as of now is: ", totalSum);
+
+			snprintf(rec, 69, "%g|", totalSum); //write the sum into rec string;
+			tempRecord.ComposeRecord(&totalSum_schema, rec); //create new record;
+			newRecord.MergeRecords(&tempRecord, &currentRecord, 1, numAttsInRecord, attsToKeep, numAttsToKeep, 1); //merge the record 
+
+			(groupByObj->outPipe_groupBy)->Insert(&currentRecord);
+			currentRecord.Copy(&nextRecord); //save the next record
+			totalSum = 0;
+			recGrouped_debug++;
+		}
+
+		totalRecords_debug++;
+		//cout<<"GroupBy: Record removed - "<<totalRecords_debug<<endl;
+
+		(groupByObj->computeMe_groupBy)->Apply(nextRecord, intResult, doubleResult);  	
+		totalSum += (intResult + doubleResult); //one of them would be zero
+		intResult = doubleResult = 0;
+	}
+
+	snprintf(rec, 69, "%g|", totalSum); //write the sum into rec string;
+	tempRecord.ComposeRecord(&totalSum_schema, rec); //create new record;
+	newRecord.MergeRecords(&tempRecord, &currentRecord, 1, numAttsInRecord, attsToKeep, numAttsToKeep, 1); //merge the record 
+	recGrouped_debug++;
+
+	(groupByObj->outPipe_groupBy)->Insert(&currentRecord);
+	(groupByObj->outPipe_groupBy)->ShutDown();
+
+	printMsg("GroupBy::Total records : ", totalRecords_debug);
+	printMsg("GroupBy::Total records after group by: ", recGrouped_debug);
+	cout<<"."<<flush;
+/*
+    cout<<"RunGroupBy:Begin"<<endl;
     GroupBy* groupby =(GroupBy*)gb;
     Pipe* inPipe = groupby->inPipe;
     Pipe* outPipe = groupby->outPipe;
     OrderMaker* groupAtts = groupby->groupAtts;
     Function* computeMe = groupby->computeMe;
-    Pipe midPipe(100);
+    Pipe midPipe(5);
 
     BigQ bigq(*inPipe, midPipe, *groupAtts, groupby->runlen);
     
@@ -589,13 +675,15 @@ void* RunGroupBy(void *gb)
     int status = midPipe.Remove(&prevRecord);
     int numAtts = 1 + groupAtts->numAtts;
     
+    cout<<"numAtts initialised to "<<numAtts<<endl;
     int* attsToKeep = new int[numAtts];
     attsToKeep[0] = 0;
     for(int i=1;i< numAtts;i++)
         attsToKeep[i] = groupAtts->whichAtts[i-1];
-    
+    cout<<"Before: While"<<endl; 
     while(status != 0)
     {
+        cout<<"while begin: numAtts :"<<numAtts<<endl;
         type = computeMe->Apply(prevRecord,IntResult,DoubleResult);
         finalResult+=(IntResult+DoubleResult);
         DoubleResult = IntResult = 0;
@@ -603,20 +691,31 @@ void* RunGroupBy(void *gb)
         status = midPipe.Remove(&record);        
         if(status!=0 && compEngine.Compare(&prevRecord, &record, groupAtts) != 0)
         {
+            cout<<"if begin"<<endl;
+            prevRecord.Project(groupAtts->whichAtts, groupAtts->numAtts, groupAtts->numAtts);
+            cout<<"projection complete"<<endl;
             Record sumRecord = constructSumRecord(type, finalResult);
             Record tempRecord;
-            tempRecord.MergeRecords(&sumRecord, &prevRecord, 1, prevRecord.numAttributes(), attsToKeep, numAtts, 1);
+            cout<<"groupAtts->num::"<<groupAtts->numAtts<<endl;
+            tempRecord.MergeRecords(&sumRecord, &prevRecord, 1, groupAtts->numAtts, attsToKeep, numAtts, 1);
+            cout<<"records merged."<<endl;
             outPipe->Insert(&tempRecord);
             finalResult = 0.0;
+            cout<<"if end"<<endl;
         }
         prevRecord.Copy(&record);
+        cout<<"while end"<<endl;
     }
+    cout<<"outside while"<<endl;
+    
     Record sumRecord = constructSumRecord(type, finalResult);
     Record tempRecord;
-    tempRecord.MergeRecords(&sumRecord, &prevRecord, 1, prevRecord.numAttributes(), attsToKeep, numAtts,1);
+    prevRecord.Project(groupAtts->whichAtts, groupAtts->numAtts, groupAtts->numAtts);
+    tempRecord.MergeRecords(&sumRecord, &prevRecord, 1, groupAtts->numAtts, attsToKeep, numAtts,1);
     outPipe->Insert(&tempRecord);
     
     outPipe->ShutDown();
+*/
 }
 /**
  * @method constructSumRecord method utility to construct a record with schema defining attribute as type
@@ -646,5 +745,6 @@ Record constructSumRecord(Type type, double val)
         sprintf(buffer, "%g|", val);
     }
     sumRecord.ComposeRecord(sch, buffer);
+    sumRecord.Print(sch);
     return sumRecord;
 }

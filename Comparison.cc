@@ -102,6 +102,10 @@ OrderMaker :: OrderMaker(Schema *schema) {
         }
 }
 
+int OrderMaker:: GetNumAtts()
+{
+    return numAtts;
+}
 
 void OrderMaker :: Print () {
 	printf("NumAtts = %5d\n", numAtts);
