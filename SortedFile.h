@@ -10,7 +10,7 @@
 #include "GenericDBFile.h"
 #include "BigQ.h"
 
-typedef enum {read,write} Mode;
+typedef enum {readMode,writeMode} Mode;
 
 class SortedFile: public virtual GenericDBFile
 {
@@ -18,15 +18,15 @@ class SortedFile: public virtual GenericDBFile
         Mode fmode;         //mode to check if file is in read or write mode.	
         BigQ* bigQ;
         File* myfile;				//File instance to actually store sorted records.
-        Page* readPage = NULL;			//Page instance used to read page.			
+        Page* readPage;			//Page instance used to read page.			
         Pipe* in;				//Input pipe
         Pipe* out;				//Output pipe
 
-        Page* writePage = NULL;			//write Page used to write.
+        Page* writePage;			//write Page used to write.
         off_t read_page_marker;
         SortInfo* sortInfo;                 // Struct Wrapper to store info for OrderMaker and runlength.
         OrderMaker queryOrder;
-        int  queryOrderChanged = -1;
+        int  queryOrderChanged;
         char* fpath;
         //method to write sortInfo struct to metadata file.
         void writeSortedOrdertoMetadata(ofstream outfile,SortInfo *sortInfo);

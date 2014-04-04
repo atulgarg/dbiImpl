@@ -35,6 +35,8 @@ SortedFile::SortedFile(): GenericDBFile()
 	in = new Pipe(100);
 	out = new Pipe(100);
     read_page_marker = 0;
+    writePage = 0;
+    readPage = 0;
 }
  /**
  * @method Create to create a new file instance with specified file name. Method writes 
@@ -64,7 +66,7 @@ int SortedFile::Create (char *f_path, fType f_type, void *startup)
     }
 
     //set the initial mode of file to read since BigQ element is empty this time.
-    fmode = read;
+    fmode = readMode;
    
     //close the metadata file since it is not required until next open.
     metafile.close();
@@ -134,14 +136,14 @@ int SortedFile::Open (char *f_path)
     infile.close();
     
     //set the initial mode for file as read mode.
-    fmode = read;
+    fmode = readMode;
     
     return initialiseSortedFile(1,f_path);
 }
 
 void SortedFile::MoveFirst () 
 {
-    if(isModeChanged(read)) 
+    if(isModeChanged(readMode)) 
     {
         initialiseForRead();
     }
@@ -154,7 +156,7 @@ void SortedFile::MoveFirst ()
 int SortedFile::Close () 
 {
 	//if there are records in BigQ instance.
-	if(fmode == write)
+	if(fmode == writeMode)
 	{
 		//merge records of BigQ and file before actually closing the file.
 		mergeRecords();
@@ -180,7 +182,7 @@ void SortedFile::Add (Record &rec)
 {
 	queryOrderChanged = -1;
     //add record to input pipe for BigQ instance.
-	if(isModeChanged(write))
+	if(isModeChanged(writeMode))
 	{
 		initialiseForWrite();
 	}
@@ -197,7 +199,7 @@ void SortedFile::initialiseForWrite()
 	in = new Pipe(100);
 	out = new Pipe(100);
 	bigQ = new BigQ(*in, *out, *sortOrder, runLength);
-	fmode = write;	
+	fmode = writeMode;	
 }
 /**
  * @method to initialise for Read if mode is switched from write mode to read mode.
@@ -209,7 +211,7 @@ void SortedFile::initialiseForRead()
 	//MoveFirst();
     read_page_marker = 0;
 	readPage = NULL;
-    fmode = read;
+    fmode = readMode;
 }
 
 int SortedFile:: GetNextRecord(Record& fromFile)
@@ -334,7 +336,7 @@ void SortedFile:: cleanUp()
  */
 int SortedFile::GetNext (Record &fetchme) 
 {
-    if(isModeChanged(read))
+    if(isModeChanged(readMode))
     {
         initialiseForRead();
     }
@@ -382,7 +384,6 @@ int SortedFile::GetNext (Record &fetchme, CNF &cnf, Record &literal)
  */
 int SortedFile::BinarySearch(Record &fetchme,CNF &cnf,Record &literal,bool searchRequired)
 {
-    cout<<"BinarySearch::Begin:"<<endl;
     ComparisonEngine compEngine;
     off_t fpIndex = 0;//read_page_marker;
     off_t lpIndex = myfile->GetLength()-1;

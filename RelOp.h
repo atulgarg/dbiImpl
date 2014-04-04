@@ -93,8 +93,8 @@ class Sum : public RelationalOp {
         Pipe *inPipe;
         Pipe *outPipe;
         Function *computeMe;
-        Attribute IA = {"int", Int};
-        Attribute DA = {"double", Double};
+        Attribute IA;
+        Attribute DA;
 
     public:
         friend void* RunSum(void *sr);

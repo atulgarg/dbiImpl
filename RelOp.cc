@@ -381,7 +381,6 @@ void * runDuplicateRemoval(void * runDuplicate)
     Pipe out(100);
     //Initialise OrderMaker object with all the attributes.
     OrderMaker sortOrder(mySchema);
-    sortOrder.Print();
     ComparisonEngine compEng;
     BigQ bigq(*(duplicateRemovalObj->inPipe),out,sortOrder,duplicateRemovalObj->runlen);
     //Take the output from outPipe and remove duplicates;
@@ -433,7 +432,7 @@ void WriteOut::Run(Pipe &inPipe, FILE *outFile, Schema &mySchema)
     this->outFile = (outFile);
     this->mySchema = &(mySchema);
     //Start thread for internal sorting.
-    int rc = pthread_create(&thread,NULL,runWriteOut,(void*)this);
+    int rc = pthread_create(&thread, NULL, runWriteOut,(void*)this);
     if(rc)
     {
         cerr<<"Not able to create worker thread"<<endl;
@@ -481,6 +480,9 @@ void Sum::Run (Pipe &inPipe, Pipe &outPipe, Function &computeMe)
     this->outPipe = &(outPipe);
     this->computeMe = &(computeMe);
     //Start thread for internal sorting.
+    IA = {"int", Int};
+    DA = {"double", Double};
+
     int rc = pthread_create(&thread,NULL, RunSum,(void*)this);
     if(rc)
     {
