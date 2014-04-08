@@ -1,22 +1,26 @@
 #ifndef STATISTICS_
 #define STATISTICS_
 #include "ParseTree.h"
-#include<map>
-#include<vector>
+#include <map>
 #include<string>
+#include<fstream>
 class RelationAttribute
 {
     public:
     int numTuples;
-    vector<int> numDistincts;
-    vector<char*> attribNames;
+    std::map<std::string,int> attribMap;
     RelationAttribute(int numTuples);
-}
+    void ReadRelation(std::ifstream& file);
+    void WriteRelation(std::ofstream& file);
+    RelationAttribute(const  RelationAttribute& copyme);
+    RelationAttribute();
+};
+
 class Statistics
 {
-    private:
-        std::map<char*, RelationAttribute> statMap;
     public:
+        std::map<std::string, RelationAttribute> statMap;
+
         Statistics();
         Statistics(Statistics &copyMe);	 // Performs deep copy
         ~Statistics();
