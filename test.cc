@@ -100,9 +100,7 @@ void q0 (){
 	yy_scan_string(cnf);
 	yyparse();
 	double result = s.Estimate(final, relName, 2);
-	if(result!=800000)
-		cout<<"error in estimating Q1 before apply \n ";
-	s.Apply(final, relName, 2);
+    s.Apply(final, relName, 2);
 
 	// test write and read
 	s.Write(fileName);
@@ -116,7 +114,7 @@ void q0 (){
 	double dummy = s1.Estimate(final, relName, 2);
 	if(fabs(dummy*3.0-result) >0.1)
 	{
-		cout<<"Read or write or last apply is not correct\n";
+		cout<<"Read or write or last apply is not correct\n"<<dummy<<endl;
 	}	
 	
 }
@@ -198,7 +196,7 @@ void q3 (){
 	s.Read(fileName);
 	
 	s.AddRel(relName[0],10000);
-	s.AddAtt(relName[0], "s_nationey",25);
+	s.AddAtt(relName[0], "s_nationkey",25);
 
 	s.AddRel(relName[1],150000);
 	s.AddAtt(relName[1], "c_custkey",150000);
@@ -325,7 +323,6 @@ void q5 (){
 	yyparse();
 	s.Apply(final, relName, 2);
 	
-	
 	cnf = " (l_orderkey = o_orderkey) ";
 	yy_scan_string(cnf);
 	yyparse();
@@ -335,7 +332,6 @@ void q5 (){
 
 	if(fabs(result-400081)>0.1)
 		cout<<"error in estimating Q5\n";
-
 	s.Apply(final, relName, 3);
 
 	s.Write(fileName);
@@ -534,11 +530,11 @@ void q11 (){
 	Statistics s;
         char *relName[] = { "part",  "lineitem"};
 
-	s.Read(fileName);
+	//s.Read(fileName);
 	
 	s.AddRel(relName[0],200000);
 	s.AddAtt(relName[0], "p_partkey",200000);
-	s.AddAtt(relName[0], "p_conatiner",40);
+	s.AddAtt(relName[0], "p_container",40);
 
 	s.AddRel(relName[1],6001215);
 	s.AddAtt(relName[1], "l_partkey",200000);

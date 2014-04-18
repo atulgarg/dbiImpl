@@ -89,15 +89,15 @@ extern YYSTYPE yylval;
 
 #ifdef YYPARSE_PARAM
 #if defined __STDC__ || defined __cplusplus
-int yyparse (void *YYPARSE_PARAM);
+extern "C" int yyparse (void *YYPARSE_PARAM);
 #else
-int yyparse ();
+extern "C" int yyparse ();
 #endif
 #else /* ! YYPARSE_PARAM */
 #if defined __STDC__ || defined __cplusplus
-int yyparse (void);
+extern "C" int yyparse (void);
 #else
-int yyparse ();
+extern "C" int yyparse ();
 #endif
 #endif /* ! YYPARSE_PARAM */
 
